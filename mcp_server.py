@@ -127,7 +127,7 @@ def rd_output(on: bool) -> dict[str, Any]:
     """Enable or disable the PSU output."""
     try:
         worker = _ensure_connected()
-        worker.output(on)
+        worker.set_output(on)
         return worker.status()
     except Exception as e:
         raise RuntimeError(f"output({on}) failed: {e}") from e

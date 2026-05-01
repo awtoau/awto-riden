@@ -19,6 +19,29 @@ ls -la /dev/ttyUSB*
 dmesg | tail -20
 ```
 
+## Manual Interface Selection (Required)
+
+Do not hardcode `/dev/ttyUSB0` in your workflow. The serial interface can change.
+
+- USB adapters may move between `/dev/ttyUSB0`, `/dev/ttyUSB1`, etc. after reconnects.
+- Some devices expose `/dev/ttyACM*` instead of `/dev/ttyUSB*`.
+- Bluetooth serial uses `/dev/rfcomm*` and is separate from USB.
+
+Always detect and select the interface manually before running commands:
+
+```bash
+# USB/ACM candidates
+ls -la /dev/ttyUSB* /dev/ttyACM* 2>/dev/null
+
+# Bluetooth serial candidates
+ls -la /dev/rfcomm* 2>/dev/null
+
+# Then pass the chosen interface explicitly
+python3 ttu_cli.py --port /dev/ttyUSB1 status
+# or
+python3 ttu_cli.py --port /dev/rfcomm0 status
+```
+
 ## Run Daemon
 
 ```bash
@@ -116,6 +139,8 @@ FileNotFoundError: [Errno 2] No such file or directory: '/dev/ttyUSB0'
 ```
 
 **Solution:** Connect PSU via USB cable
+
+If the device is connected but not on USB, use the correct interface (`/dev/rfcomm*` for Bluetooth serial).
 
 ### Daemon already running on socket
 

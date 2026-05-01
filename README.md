@@ -126,33 +126,49 @@ def rd_output(on: bool):
 **Transport:** USB serial only (via `pyserial` + ShayBox/Riden library)
 
 **Architecture:**
-- Daemon (`riden_daemon.py`): Owns serial connection; multiplexes clients via Unix socket
-- CLI (`ttu_cli.py`): Human-friendly subcommands (status, set-voltage, etc.)
-- MCP server (`mcp_server.py`): 9 FastMCP tools for Copilot/agents
-- Test harness (`test_harness.py`): 31 unit tests, all passing
+- `riden_daemon.py`: Houses `RidenWorker` — thread-safe PSU wrapper (no daemon, no socket)
+- `ttu_cli.py`: One-shot CLI — opens serial, runs one command, closes
+- `mcp_server.py`: 9 FastMCP tools for Copilot/agents — opens serial at startup
+- `test_harness.py`: 14 unit tests, all passing (MockRiden, no hardware required)
 
 **Quick start:**
 ```bash
 # Install
 pip install -e .
 
-# Run daemon (requires RD60xx connected to /dev/ttyUSB0)
-python3 riden_daemon.py --port /dev/ttyUSB0 --baud 115200
-
-# In another terminal: query status
-python3 ttu_cli.py status
+# Query status (requires RD60xx connected to /dev/ttyUSB0)
+python3 ttu_cli.py --port /dev/ttyUSB0 status
 
 # Or use MCP with Copilot:
 # - Register .vscode/mcp.json in VS Code settings
 # - Ask Copilot: "What's the current PSU output?"
 ```
 
+**Manual interface selection (important):**
+- Do not assume `/dev/ttyUSB0` is always correct.
+- On reconnect, Linux may re-enumerate the adapter as `/dev/ttyUSB1`, `/dev/ttyUSB2`, etc.
+- Bluetooth serial devices usually appear as `/dev/rfcomm0` (or another `rfcomm` index), not `ttyUSB`.
+- Always list available ports first, then pass the exact one with `--port`.
+
+```bash
+# Check USB serial candidates
+ls -la /dev/ttyUSB* /dev/ttyACM* 2>/dev/null
+
+# Check Bluetooth serial candidates
+ls -la /dev/rfcomm* 2>/dev/null
+
+# Use the selected interface explicitly
+python3 ttu_cli.py --port /dev/ttyUSB1 status
+# or
+python3 ttu_cli.py --port /dev/rfcomm0 status
+```
+
 **Full USB testing guide:** See [USB_TESTING.md](USB_TESTING.md) for all commands and error modes
 
-**Test suite:**
+**Test suite (no hardware required):**
 ```bash
 python3 test_harness.py
-# Output: Ran 31 tests in 1.4s — OK
+# Output: Ran 14 tests in 0.4s — OK
 ```
 
 ### v0.2 (Planned: BLE Support)

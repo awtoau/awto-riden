@@ -20,14 +20,121 @@ from typing import Any
 
 import colorlog
 import psutil
+from modbus_tk.exceptions import ModbusInvalidResponseError
 from riden import Riden
+from riden.register import Register as R
 
-from protocol import DEFAULT_ADDRESS, DEFAULT_BAUD, DEFAULT_PORT
+from protocol import (
+    DEFAULT_ADDRESS,
+    DEFAULT_BAUD,
+    DEFAULT_PORT,
+    ERR_INTERNAL,
+    ERR_INVALID_ARG,
+    ERR_IO,
+    ERR_NOT_CONNECTED,
+    ERR_TIMEOUT,
+)
 
 log = logging.getLogger("riden.daemon")
 
 _start_time   = time.monotonic()
 _FREE_THREADED = sys.version_info >= (3, 13) and not sys._is_gil_enabled()
+
+
+def _patch_riden_for_stability() -> None:
+    """Patch upstream driver methods that otherwise retry forever.
+
+    ShayBox/Riden's default read/write methods recurse without a retry cap on
+    ModbusInvalidResponseError. On flaky links this can hang forever. We patch
+    methods once at import time with bounded retries.
+    """
+    if getattr(Riden, "_awto_patched", False):
+        return
+
+    def _safe_read(self, register: int, length: int = 1):
+        last_exc: Exception | None = None
+        for _ in range(3):
+            try:
+                response = self.master.execute(
+                    self.address,
+                    3,  # READ_HOLDING_REGISTERS
+                    register,
+                    length,
+                )
+                return response if length > 1 else response[0]
+            except ModbusInvalidResponseError as exc:
+                last_exc = exc
+        raise TimeoutError(f"modbus read failed after retries: reg={register} len={length}") from last_exc
+
+    def _safe_write(self, register: int, value: int) -> int:
+        last_exc: Exception | None = None
+        for _ in range(3):
+            try:
+                return self.master.execute(
+                    self.address,
+                    6,  # WRITE_SINGLE_REGISTER
+                    register,
+                    1,
+                    value,
+                )[0]
+            except ModbusInvalidResponseError as exc:
+                last_exc = exc
+        raise TimeoutError(f"modbus write failed after retries: reg={register}") from last_exc
+
+    def _safe_write_multiple(self, register: int, values: tuple | list) -> tuple:
+        last_exc: Exception | None = None
+        for _ in range(3):
+            try:
+                return self.master.execute(
+                    self.address,
+                    16,  # WRITE_MULTIPLE_REGISTERS
+                    register,
+                    1,
+                    values,
+                )
+            except ModbusInvalidResponseError as exc:
+                last_exc = exc
+        raise TimeoutError(f"modbus write-multiple failed after retries: reg={register}") from last_exc
+
+    def _safe_update(self) -> None:
+        # Read only core status bank (registers 4..19). The upstream update also
+        # reads BAT/WH banks, which is unreliable on some RK/RD firmwares.
+        data = (None,) * 4
+        data += self.read(R.INT_C_S, (R.PRESET - R.INT_C_S) + 1)
+        if self.type == "RD6012P":
+            self.i_multi = 10000 if data[R.I_RANGE] == 0 else 1000
+        self.get_int_c(data[R.INT_C_S], data[R.INT_C])
+        self.get_int_f(data[R.INT_F_S], data[R.INT_F])
+        self.get_v_set(data[R.V_SET])
+        self.get_i_set(data[R.I_SET])
+        self.get_v_out(data[R.V_OUT])
+        self.get_i_out(data[R.I_OUT])
+        self.get_p_out(data[R.P_OUT])
+        self.get_v_in(data[R.V_IN])
+        self.is_keypad(data[R.KEYPAD])
+        self.get_ovp_ocp(data[R.OVP_OCP])
+        self.get_cv_cc(data[R.CV_CC])
+        self.is_output(data[R.OUTPUT])
+        self.get_preset(data[R.PRESET])
+        # Worker code expects `enable`; upstream driver sets `output`.
+        self.enable = bool(getattr(self, "output", False))
+
+    Riden.read = _safe_read
+    Riden.write = _safe_write
+    Riden.write_multiple = _safe_write_multiple
+    Riden.update = _safe_update
+    Riden._awto_patched = True
+
+
+_patch_riden_for_stability()
+
+
+def _infer_v_scale(psu: Riden) -> int:
+    return int(getattr(psu, "v_multi", 100) or 100)
+
+
+def _infer_i_scale(psu: Riden) -> int:
+    return int(getattr(psu, "i_multi", 1000) or 1000)
 
 
 # ---------------------------------------------------------------------------
@@ -92,6 +199,42 @@ class RidenWorker:
         self._log_thread: threading.Thread | None = None
         self._log_stop    = threading.Event()
 
+        # Observability counters (pattern from sibling awto-mcp-* repos)
+        self._ops_total = 0
+        self._ops_ok = 0
+        self._ops_err = 0
+        self._ops_by_cmd: dict[str, int] = {}
+        self._last_error: dict[str, Any] | None = None
+
+    def _error_code(self, exc: Exception) -> str:
+        if isinstance(exc, TimeoutError):
+            return ERR_TIMEOUT
+        if isinstance(exc, (ValueError, TypeError)):
+            return ERR_INVALID_ARG
+        if isinstance(exc, (IOError, OSError)):
+            msg = str(exc).lower()
+            if "not connected" in msg:
+                return ERR_NOT_CONNECTED
+            return ERR_IO
+        return ERR_INTERNAL
+
+    def _execute(self, cmd: str, fn):
+        self._ops_total += 1
+        self._ops_by_cmd[cmd] = self._ops_by_cmd.get(cmd, 0) + 1
+        try:
+            out = fn()
+            self._ops_ok += 1
+            return out
+        except Exception as exc:
+            self._ops_err += 1
+            self._last_error = {
+                "cmd": cmd,
+                "error": str(exc),
+                "code": self._error_code(exc),
+                "ts": time.time(),
+            }
+            raise
+
     # ------------------------------------------------------------------
     # Lifecycle
     # ------------------------------------------------------------------
@@ -146,9 +289,41 @@ class RidenWorker:
 
     @staticmethod
     def _protection_str(psu: Riden) -> str:
-        # Register 16: 0=none, 1=OVP, 2=OCP
-        val = getattr(psu, "protect", 0) or 0
-        return {1: "OVP", 2: "OCP"}.get(int(val), "none")
+        # Upstream can expose either numeric `protect` or string `ovp_ocp`.
+        val = getattr(psu, "protect", None)
+        if val is not None:
+            try:
+                return {1: "OVP", 2: "OCP"}.get(int(val), "none")
+            except (TypeError, ValueError):
+                pass
+        txt = str(getattr(psu, "ovp_ocp", "") or "").upper()
+        if txt in {"OVP", "OCP"}:
+            return txt
+        return "none"
+
+    @staticmethod
+    def _output_on(psu: Riden) -> bool:
+        if hasattr(psu, "enable"):
+            return bool(getattr(psu, "enable"))
+        return bool(getattr(psu, "output", False))
+
+    @staticmethod
+    def _set_output(psu: Riden, on: bool) -> None:
+        if hasattr(psu, "set_output"):
+            psu.set_output(on)
+        if hasattr(psu, "enable"):
+            psu.enable = on
+        if hasattr(psu, "output"):
+            psu.output = on
+
+    @staticmethod
+    def _cv_cc_str(psu: Riden) -> str:
+        cv = getattr(psu, "cv_cc", 0)
+        if isinstance(cv, str):
+            cv_upper = cv.upper()
+            if cv_upper in {"CV", "CC"}:
+                return cv_upper
+        return "CC" if int(cv) == 1 else "CV"
 
     def _read_status(self, psu: Riden) -> dict[str, Any]:
         psu.update()
@@ -159,8 +334,8 @@ class RidenWorker:
             "i_out":   round(float(psu.i_out),  4),
             "p_out":   round(float(psu.p_out),  3),
             "v_in":    round(float(psu.v_in),   2),
-            "output":  bool(psu.enable),
-            "cv_cc":   "CC" if getattr(psu, "cv_cc", 0) else "CV",
+            "output":  self._output_on(psu),
+            "cv_cc":   self._cv_cc_str(psu),
             "protect": self._protection_str(psu),
             "temp_c":  getattr(psu, "int_c", None),
         }
@@ -170,79 +345,103 @@ class RidenWorker:
     # ------------------------------------------------------------------
 
     def status(self) -> dict[str, Any]:
-        with self._lock:
-            return self._read_status(self._assert_connected())
+        def _run() -> dict[str, Any]:
+            with self._lock:
+                return self._read_status(self._assert_connected())
+
+        return self._execute("status", _run)
 
     def set_voltage(self, volts: float) -> dict[str, Any]:
-        with self._lock:
-            psu = self._assert_connected()
-            psu.set_v_set(volts)
-            return self._read_status(psu)
+        def _run() -> dict[str, Any]:
+            with self._lock:
+                psu = self._assert_connected()
+                psu.set_v_set(volts)
+                return self._read_status(psu)
+
+        return self._execute("set_voltage", _run)
 
     def set_current(self, amps: float) -> dict[str, Any]:
-        with self._lock:
-            psu = self._assert_connected()
-            psu.set_i_set(amps)
-            return self._read_status(psu)
+        def _run() -> dict[str, Any]:
+            with self._lock:
+                psu = self._assert_connected()
+                psu.set_i_set(amps)
+                return self._read_status(psu)
+
+        return self._execute("set_current", _run)
 
     def set_output(self, on: bool) -> dict[str, Any]:
-        with self._lock:
-            psu = self._assert_connected()
-            psu.enable = on
-            return self._read_status(psu)
+        def _run() -> dict[str, Any]:
+            with self._lock:
+                psu = self._assert_connected()
+                self._set_output(psu, on)
+                return self._read_status(psu)
+
+        return self._execute("set_output", _run)
 
     def set_ovp(self, volts: float) -> dict[str, Any]:
         """Set over-voltage protection via M0 OVP register (register 82)."""
-        with self._lock:
-            psu = self._assert_connected()
-            if hasattr(psu, "set_ovp"):
-                psu.set_ovp(volts)
-            else:
-                # Direct Modbus write — scale matches v_set (×100 for RD60xx)
-                scale = _infer_v_scale(psu)
-                psu._client.write_register(82, int(volts * scale), unit=self._address)
-            return self._read_status(psu)
+        def _run() -> dict[str, Any]:
+            with self._lock:
+                psu = self._assert_connected()
+                if hasattr(psu, "set_ovp"):
+                    psu.set_ovp(volts)
+                else:
+                    # Direct Modbus write — scale matches v_set (×100 for RD60xx)
+                    scale = _infer_v_scale(psu)
+                    psu._client.write_register(82, int(volts * scale), unit=self._address)
+                return self._read_status(psu)
+
+        return self._execute("set_ovp", _run)
 
     def set_ocp(self, amps: float) -> dict[str, Any]:
         """Set over-current protection via M0 OCP register (register 83)."""
-        with self._lock:
-            psu = self._assert_connected()
-            if hasattr(psu, "set_ocp"):
-                psu.set_ocp(amps)
-            else:
-                # Direct Modbus write — scale matches i_set (×1000 for RD60xx)
-                scale = _infer_i_scale(psu)
-                psu._client.write_register(83, int(amps * scale), unit=self._address)
-            return self._read_status(psu)
+        def _run() -> dict[str, Any]:
+            with self._lock:
+                psu = self._assert_connected()
+                if hasattr(psu, "set_ocp"):
+                    psu.set_ocp(amps)
+                else:
+                    # Direct Modbus write — scale matches i_set (×1000 for RD60xx)
+                    scale = _infer_i_scale(psu)
+                    psu._client.write_register(83, int(amps * scale), unit=self._address)
+                return self._read_status(psu)
+
+        return self._execute("set_ocp", _run)
 
     def power_cycle(self, seconds: float) -> dict[str, Any]:
-        with self._lock:
-            psu = self._assert_connected()
-            psu.enable = False
-        time.sleep(max(0.1, seconds))
-        with self._lock:
-            psu = self._assert_connected()
-            psu.enable = True
-            return self._read_status(psu)
+        def _run() -> dict[str, Any]:
+            with self._lock:
+                psu = self._assert_connected()
+                self._set_output(psu, False)
+            time.sleep(max(0.1, seconds))
+            with self._lock:
+                psu = self._assert_connected()
+                self._set_output(psu, True)
+                return self._read_status(psu)
+
+        return self._execute("power_cycle", _run)
 
     # ------------------------------------------------------------------
     # Status logging
     # ------------------------------------------------------------------
 
     def log_start(self, path: str, interval_ms: int) -> None:
-        self._stop_log()
-        self._log_stop.clear()
-        self._log_path = path
-        with self._log_lock:
-            self._log_file = open(path, "a")
-        self._log_thread = threading.Thread(
-            target=self._log_loop,
-            args=(interval_ms,),
-            daemon=True,
-            name="riden-log",
-        )
-        self._log_thread.start()
-        log.info("logging started → %s every %d ms", path, interval_ms)
+        def _run() -> None:
+            self._stop_log()
+            self._log_stop.clear()
+            self._log_path = path
+            with self._log_lock:
+                self._log_file = open(path, "a")
+            self._log_thread = threading.Thread(
+                target=self._log_loop,
+                args=(interval_ms,),
+                daemon=True,
+                name="riden-log",
+            )
+            self._log_thread.start()
+            log.info("logging started → %s every %d ms", path, interval_ms)
+
+        self._execute("log_start", _run)
 
     def _log_loop(self, interval_ms: int) -> None:
         while not self._log_stop.wait(interval_ms / 1000.0):
@@ -257,8 +456,35 @@ class RidenWorker:
                 log.warning("log loop error: %s", exc)
 
     def log_stop(self) -> None:
-        self._stop_log()
-        log.info("logging stopped")
+        def _run() -> None:
+            self._stop_log()
+            log.info("logging stopped")
+
+        self._execute("log_stop", _run)
+
+    def capabilities(self) -> dict[str, Any]:
+        return {
+            "tools": [
+                "status",
+                "set_voltage",
+                "set_current",
+                "set_output",
+                "set_ovp",
+                "set_ocp",
+                "power_cycle",
+                "log_start",
+                "log_stop",
+                "info",
+            ],
+            "error_codes": [
+                ERR_NOT_CONNECTED,
+                ERR_TIMEOUT,
+                ERR_IO,
+                ERR_INVALID_ARG,
+                ERR_INTERNAL,
+            ],
+            "transport": ["usb-serial", "bluetooth-serial"],
+        }
 
     def _stop_log(self) -> None:
         self._log_stop.set()
@@ -294,5 +520,10 @@ class RidenWorker:
                 "logging":      self._log_path,
                 "free_threaded": _FREE_THREADED,
                 "python":       sys.version.split()[0],
+                "ops_total":    self._ops_total,
+                "ops_ok":       self._ops_ok,
+                "ops_err":      self._ops_err,
+                "ops_by_cmd":   dict(self._ops_by_cmd),
+                "last_error":   self._last_error,
             }
 

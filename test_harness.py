@@ -26,6 +26,11 @@ from unittest.mock import MagicMock, patch
 from protocol import make_err, make_ok, recv_response, send_request
 from riden_daemon import RidenWorker
 
+# Fake port — never resolves to real hardware; any test that accidentally
+# bypasses the mock will fail immediately with a clear serial error, not
+# silently probe a connected device.
+MOCK_PORT = "MOCK://"
+
 
 # ---------------------------------------------------------------------------
 # Mock Riden PSU driver — replaces real hardware
@@ -40,17 +45,17 @@ class MockRiden:
         self.address = address
         self.id = "RD6006"
 
-        # PSU state
+        # PSU state (attribute names match ShayBox/Riden library)
         self.v_set = 5.0
         self.i_set = 1.0
         self.v_out = 4.998
         self.i_out = 0.501
         self.p_out = 2.502
         self.v_in = 24.1
-        self.output = True
-        self.cv_cc = "CV"
-        self.protect = "none"
-        self.temp_c = 28
+        self.enable = True
+        self.cv_cc = 0        # 0=CV, 1=CC
+        self.protect = 0      # 0=none, 1=OVP, 2=OCP
+        self.int_c = 28
 
     def open(self) -> None:
         """Simulate opening serial port."""
@@ -64,13 +69,11 @@ class MockRiden:
         """Simulate reading PSU state."""
         pass
 
-    def write(self, data: bytes) -> None:
-        """Simulate writing Modbus command."""
-        pass
+    def set_v_set(self, volts: float) -> None:
+        self.v_set = volts
 
-    def read(self) -> bytes:
-        """Simulate reading Modbus response."""
-        return b""
+    def set_i_set(self, amps: float) -> None:
+        self.i_set = amps
 
 
 # ---------------------------------------------------------------------------
@@ -97,23 +100,25 @@ class TestProtocol(unittest.TestCase):
 class TestRidenWorker(unittest.TestCase):
 
     def setUp(self) -> None:
-        """Patch Riden before importing RidenWorker."""
+        """Patch Riden before each test — no real hardware probed."""
         self.riden_patcher = patch("riden_daemon.Riden", MockRiden)
         self.mock_riden_class = self.riden_patcher.start()
+        import riden_daemon
+        assert riden_daemon.Riden is MockRiden, "Mock patch did not apply — would probe real hardware"
 
     def tearDown(self) -> None:
         self.riden_patcher.stop()
 
     def test_worker_init_and_open(self) -> None:
         """Test RidenWorker initialization and serial connection."""
-        worker = RidenWorker(port="/dev/ttyUSB0", baud=115200, address=1)
+        worker = RidenWorker(port=MOCK_PORT, baud=115200, address=1)
         worker.open()
         self.assertIsNotNone(worker._psu)
         worker.close()
 
     def test_status_returns_dict(self) -> None:
         """Test that status() returns expected PSU state fields."""
-        worker = RidenWorker(port="/dev/ttyUSB0", baud=115200, address=1)
+        worker = RidenWorker(port=MOCK_PORT, baud=115200, address=1)
         worker.open()
         status = worker.status()
         self.assertIn("v_set", status)
@@ -125,7 +130,7 @@ class TestRidenWorker(unittest.TestCase):
 
     def test_set_voltage(self) -> None:
         """Test setting voltage and checking status."""
-        worker = RidenWorker(port="/dev/ttyUSB0", baud=115200, address=1)
+        worker = RidenWorker(port=MOCK_PORT, baud=115200, address=1)
         worker.open()
         worker.set_voltage(12.0)
         status = worker.status()
@@ -134,7 +139,7 @@ class TestRidenWorker(unittest.TestCase):
 
     def test_set_current(self) -> None:
         """Test setting current and checking status."""
-        worker = RidenWorker(port="/dev/ttyUSB0", baud=115200, address=1)
+        worker = RidenWorker(port=MOCK_PORT, baud=115200, address=1)
         worker.open()
         worker.set_current(2.5)
         status = worker.status()
@@ -143,20 +148,20 @@ class TestRidenWorker(unittest.TestCase):
 
     def test_output_control(self) -> None:
         """Test enabling/disabling output."""
-        worker = RidenWorker(port="/dev/ttyUSB0", baud=115200, address=1)
+        worker = RidenWorker(port=MOCK_PORT, baud=115200, address=1)
         worker.open()
 
-        worker.output(False)
+        worker.set_output(False)
         self.assertFalse(worker.status()["output"])
 
-        worker.output(True)
+        worker.set_output(True)
         self.assertTrue(worker.status()["output"])
 
         worker.close()
 
     def test_power_cycle(self) -> None:
         """Test power cycle command."""
-        worker = RidenWorker(port="/dev/ttyUSB0", baud=115200, address=1)
+        worker = RidenWorker(port=MOCK_PORT, baud=115200, address=1)
         worker.open()
 
         # Power cycle should return to the same state
@@ -168,7 +173,7 @@ class TestRidenWorker(unittest.TestCase):
 
     def test_info_fields(self) -> None:
         """Test that info() returns process health metrics."""
-        worker = RidenWorker(port="/dev/ttyUSB0", baud=115200, address=1)
+        worker = RidenWorker(port=MOCK_PORT, baud=115200, address=1)
         worker.open()
 
         info = worker.info()
@@ -178,13 +183,13 @@ class TestRidenWorker(unittest.TestCase):
         self.assertIn("threads", info)
         self.assertIn("open_fds", info)
         self.assertIn("free_threaded", info)
-        self.assertIn("python_version", info)
+        self.assertIn("python", info)
 
         worker.close()
 
     def test_log_start_stop(self) -> None:
         """Test logging start/stop."""
-        worker = RidenWorker(port="/dev/ttyUSB0", baud=115200, address=1)
+        worker = RidenWorker(port=MOCK_PORT, baud=115200, address=1)
         worker.open()
 
         log_path = "/tmp/test_riden.log"
@@ -221,9 +226,18 @@ class TestCLI(unittest.TestCase):
 
 class TestDataStructures(unittest.TestCase):
 
+    def setUp(self) -> None:
+        self.riden_patcher = patch("riden_daemon.Riden", MockRiden)
+        self.riden_patcher.start()
+        import riden_daemon
+        assert riden_daemon.Riden is MockRiden, "Mock patch did not apply — would probe real hardware"
+
+    def tearDown(self) -> None:
+        self.riden_patcher.stop()
+
     def test_status_fields_consistency(self) -> None:
         """Test that worker.status() has the expected fields."""
-        worker = RidenWorker(port="/dev/ttyUSB0", baud=115200, address=1)
+        worker = RidenWorker(port=MOCK_PORT, baud=115200, address=1)
         worker.open()
 
         status = worker.status()

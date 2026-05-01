@@ -16,9 +16,23 @@ from typing import Any
 import colorlog
 from rich_argparse import RichHelpFormatter
 
+from protocol import ERR_INTERNAL, ERR_INVALID_ARG, ERR_IO, ERR_NOT_CONNECTED, ERR_TIMEOUT
 from riden_daemon import RidenWorker
 
 log = logging.getLogger("awto.cli")
+
+
+def _error_code(exc: Exception) -> str:
+    if isinstance(exc, TimeoutError):
+        return ERR_TIMEOUT
+    if isinstance(exc, (ValueError, TypeError)):
+        return ERR_INVALID_ARG
+    if isinstance(exc, (IOError, OSError)):
+        msg = str(exc).lower()
+        if "not connected" in msg:
+            return ERR_NOT_CONNECTED
+        return ERR_IO
+    return ERR_INTERNAL
 
 
 # ---------------------------------------------------------------------------
@@ -102,6 +116,7 @@ def main() -> None:
     _F = RichHelpFormatter
 
     sub.add_parser("ping", help="health-check the PSU", formatter_class=_F)
+    sub.add_parser("capabilities", help="show API capabilities and error codes", formatter_class=_F)
     sub.add_parser("status", help="show current PSU state", formatter_class=_F)
     sub.add_parser("info", help="show PSU process health", formatter_class=_F)
 
@@ -158,7 +173,7 @@ def main() -> None:
         worker = RidenWorker(port=args.port, baud=args.baud, address=args.address)
         worker.open()
     except Exception as e:
-        print(json.dumps({"error": f"failed to open PSU: {e}"}), file=sys.stderr)
+        print(json.dumps({"error": f"failed to open PSU: {e}", "code": _error_code(e)}), file=sys.stderr)
         sys.exit(1)
 
     # Execute command
@@ -168,6 +183,8 @@ def main() -> None:
 
         if c == "ping":
             result = {"ok": True}
+        elif c == "capabilities":
+            result = worker.capabilities()
         elif c == "status":
             result = worker.status()
         elif c == "info":
@@ -179,7 +196,7 @@ def main() -> None:
             worker.set_current(args.amps)
             result = worker.status()
         elif c == "output":
-            worker.output(args.state == "on")
+            worker.set_output(args.state == "on")
             result = worker.status()
         elif c == "set-ovp":
             worker.set_ovp(args.volts)
@@ -199,7 +216,7 @@ def main() -> None:
 
         print(json.dumps(result, indent=2))
     except Exception as e:
-        print(json.dumps({"error": str(e)}), file=sys.stderr)
+        print(json.dumps({"error": str(e), "code": _error_code(e)}), file=sys.stderr)
         sys.exit(1)
     finally:
         worker.close()

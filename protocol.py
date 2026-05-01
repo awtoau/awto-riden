@@ -46,6 +46,13 @@ DEFAULT_PORT        = "/dev/ttyUSB0"
 DEFAULT_BAUD        = 115200
 DEFAULT_ADDRESS     = 1
 
+# Stable error codes (aligned with sibling awto-mcp-* repos)
+ERR_NOT_CONNECTED = "ENOTCONN"
+ERR_TIMEOUT = "ETIMEOUT"
+ERR_IO = "EIO"
+ERR_INVALID_ARG = "EINVAL"
+ERR_INTERNAL = "EINTERNAL"
+
 
 def send_request(sock: socket.socket, req: dict[str, Any]) -> dict[str, Any]:
     """Send a JSON-lines request and return the parsed response."""
@@ -66,9 +73,11 @@ def recv_response(sock: socket.socket) -> dict[str, Any]:
             return json.loads(line.decode())
 
 
-def make_ok(response: str) -> dict[str, Any]:
+def make_ok(response: Any) -> dict[str, Any]:
+    if isinstance(response, dict):
+        return {"ok": True, **response}
     return {"ok": True, "response": response}
 
 
-def make_err(error: str) -> dict[str, Any]:
-    return {"ok": False, "error": error}
+def make_err(error: str, code: str = ERR_INTERNAL) -> dict[str, Any]:
+    return {"ok": False, "error": error, "code": code}
