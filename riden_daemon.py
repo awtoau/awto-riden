@@ -13,6 +13,8 @@ from __future__ import annotations
 import json
 import logging
 import logging.handlers
+import math
+import statistics
 import sys
 import threading
 import time
@@ -258,6 +260,7 @@ class RidenWorker:
         self._ops_err = 0
         self._ops_by_cmd: dict[str, int] = {}
         self._last_error: dict[str, Any] | None = None
+        self._serial_profile: dict[str, Any] | None = None
 
     def _error_code(self, exc: Exception) -> str:
         if isinstance(exc, TimeoutError):
@@ -298,11 +301,23 @@ class RidenWorker:
             transport.open()
             try:
                 self._psu = RidenDevice(transport)
+                self._serial_profile = None
+                try:
+                    self._serial_profile = self._profile_serial_locked(self._psu, count=10, sleep_ms=100)
+                except Exception as profile_exc:
+                    log.warning("serial auto-profile failed (continuing without pacing hint): %s", profile_exc)
                 log.info(
                     "connected to PSU on %s (baud=%d addr=%d) type=%s id=%s fw=%s",
                     self._port, self._baud, self._address,
                     self._psu.type, self._psu.id, self._psu.fw,
                 )
+                if self._serial_profile is not None:
+                    log.info(
+                        "serial pacing profile: recommended_poll_ms=%d median_ms=%.2f jitter_ms=%.2f",
+                        self._serial_profile["recommended_poll_ms"],
+                        self._serial_profile["timing"]["median_ms"],
+                        self._serial_profile["timing"]["jitter_p95_minus_p50_ms"],
+                    )
             except Exception as e:
                 transport.close()
                 log.warning(
@@ -413,6 +428,97 @@ class RidenWorker:
         info["address"] = self._address
         info["transport"] = "bluetooth-serial" if "rfcomm" in self._port else "usb-serial"
         return info
+
+    def _profile_serial_locked(
+        self,
+        psu: RidenDevice,
+        count: int = 20,
+        sleep_ms: int = 100,
+        register: int = 10,
+        reg_count: int = 9,
+    ) -> dict[str, Any]:
+        """Profile serial poll timing using current transport/session.
+
+        Runs a fixed-cadence read loop to estimate a stable poll interval rather
+        than chasing minimum RTT.
+        """
+        if count < 3:
+            raise ValueError("count must be >= 3")
+        if sleep_ms < 0:
+            raise ValueError("sleep_ms must be >= 0")
+        if reg_count < 1:
+            raise ValueError("reg_count must be >= 1")
+
+        times_ms: list[float] = []
+        ok = 0
+
+        # Warm-up avoids one-time first-read artifacts.
+        psu.transport.read(register, reg_count)
+        for _ in range(count):
+            t0 = time.perf_counter()
+            psu.transport.read(register, reg_count)
+            dt_ms = (time.perf_counter() - t0) * 1000
+            times_ms.append(dt_ms)
+            ok += 1
+            if sleep_ms > 0:
+                time.sleep(sleep_ms / 1000.0)
+
+        samples = sorted(times_ms)
+        p50 = statistics.median(samples)
+        p90 = samples[int(0.9 * (len(samples) - 1))]
+        p95 = samples[int(0.95 * (len(samples) - 1))]
+        jitter = max(0.0, p95 - p50)
+
+        bytes_per_sec = self._baud / 10.0
+        us_per_byte = 1_000_000.0 / bytes_per_sec
+        wire_ms = ((8 + (5 + reg_count * 2)) * us_per_byte) / 1000.0
+
+        # Data-driven stable cadence: keep interval above p95 with a small headroom,
+        # then quantize to practical scheduling buckets.
+        raw_recommended_ms = p95 + max(3.0, p95 * 0.10)
+        quantization_ms = 50 if raw_recommended_ms >= 250.0 else 20
+        recommended_poll_ms = int(math.ceil(raw_recommended_ms / quantization_ms) * quantization_ms)
+
+        transport_name = "bluetooth-serial" if "rfcomm" in self._port else "usb-serial"
+        return {
+            "recommended_poll_ms": recommended_poll_ms,
+            "strategy": "stable-cadence",
+            "raw_recommended_poll_ms": round(raw_recommended_ms, 2),
+            "quantization_ms": quantization_ms,
+            "transport": transport_name,
+            "wire_theory_ms": round(wire_ms, 3),
+            "register_read": {
+                "start": register,
+                "count": reg_count,
+            },
+            "timing": {
+                "count": count,
+                "sleep_ms": sleep_ms,
+                "ok": ok,
+                "min_ms": round(min(samples), 2),
+                "median_ms": round(p50, 2),
+                "p90_ms": round(p90, 2),
+                "p95_ms": round(p95, 2),
+                "max_ms": round(max(samples), 2),
+                "mean_ms": round(statistics.mean(samples), 2),
+                "jitter_p95_minus_p50_ms": round(jitter, 2),
+            },
+            "notes": [
+                "Recommendation is tuned for stable timestamp spacing, not minimum RTT.",
+                "Recommendation is derived from measured p95 latency plus headroom.",
+                "Poll interval is quantized to 20 ms or 50 ms buckets for practical schedulers.",
+            ],
+        }
+
+    def profile_serial(self, count: int = 20, sleep_ms: int = 100) -> dict[str, Any]:
+        """Profile link timing and compute a stable recommended polling cadence."""
+        def _run() -> dict[str, Any]:
+            with self._lock:
+                psu = self._assert_connected()
+                self._serial_profile = self._profile_serial_locked(psu, count=count, sleep_ms=sleep_ms)
+                return dict(self._serial_profile)
+
+        return self._execute("profile_serial", _run)
 
     @staticmethod
     def _coerce_bool(value: Any) -> bool:
@@ -764,6 +870,21 @@ class RidenWorker:
         Call log_stop() to stop.
         """
         def _run() -> None:
+            profile = self._serial_profile
+            if profile is not None:
+                recommended = int(profile.get("recommended_poll_ms", interval_ms))
+                if interval_ms < recommended:
+                    log.info(
+                        "requested interval %d ms is below recommended stable pacing %d ms; clamping",
+                        interval_ms,
+                        recommended,
+                    )
+                    interval_ms_local = recommended
+                else:
+                    interval_ms_local = interval_ms
+            else:
+                interval_ms_local = interval_ms
+
             self._stop_log()
             self._log_stop.clear()
             self._log_path = path
@@ -771,14 +892,14 @@ class RidenWorker:
                 self._log_file = open(path, "a")
             self._log_thread = threading.Thread(
                 target=self._current_log_loop,
-                args=(interval_ms, v_thresh, i_thresh),
+                args=(interval_ms_local, v_thresh, i_thresh),
                 daemon=True,
                 name="riden-ilog",
             )
             self._log_thread.start()
             log.info(
                 "current logging started → %s every %d ms (v_thresh=%.3f i_thresh=%.4f)",
-                path, interval_ms, v_thresh, i_thresh,
+                path, interval_ms_local, v_thresh, i_thresh,
             )
 
         self._execute("log_current_start", _run)
@@ -1258,6 +1379,7 @@ class RidenWorker:
                 "beep",
                 "modbus_read_holding",
                 "modbus_write_register",
+                "profile_serial",
                 "info",
             ],
             "error_codes": [
@@ -1270,6 +1392,13 @@ class RidenWorker:
             "transport": ["usb-serial", "bluetooth-serial"],
             "transport_active": "bluetooth-serial" if "rfcomm" in self._port else "usb-serial",
             "device": self._device_info(psu),
+            "mcp_properties": {
+                "serial_profile_available": True,
+                "recommended_poll_ms": (
+                    None if self._serial_profile is None else self._serial_profile.get("recommended_poll_ms")
+                ),
+            },
+            "serial_profile": self._serial_profile,
             "waveforms": list(self.WAVEFORMS),
             "parameters": self._list_parameters_locked(psu),
         }
@@ -1313,6 +1442,7 @@ class RidenWorker:
                 "ops_err":      self._ops_err,
                 "ops_by_cmd":   dict(self._ops_by_cmd),
                 "last_error":   self._last_error,
+                "serial_profile": self._serial_profile,
             }
 
     def speed_test(self, count: int = 30) -> dict[str, Any]:

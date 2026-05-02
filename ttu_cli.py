@@ -164,6 +164,10 @@ def main() -> None:
     sp_st = sub.add_parser("speed-test", help="benchmark Modbus round-trip latency", formatter_class=_F)
     sp_st.add_argument("--count", type=int, default=30, metavar="N", help="number of reads (default: 30)")
 
+    sp_prof = sub.add_parser("profile-serial", help="profile serial timing and recommend stable poll cadence", formatter_class=_F)
+    sp_prof.add_argument("--count", type=int, default=20, metavar="N", help="number of reads (default: 20)")
+    sp_prof.add_argument("--sleep-ms", type=int, default=100, metavar="MS", help="inter-read delay during profiling (default: 100)")
+
     args = ap.parse_args()
     if args.subcmd is None:
         ap.print_help()
@@ -218,6 +222,8 @@ def main() -> None:
             result = {"ok": True}
         elif c == "speed-test":
             result = worker.speed_test(args.count)
+        elif c == "profile-serial":
+            result = worker.profile_serial(args.count, args.sleep_ms)
 
         print(json.dumps(result, indent=2))
     except Exception as e:

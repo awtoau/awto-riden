@@ -1,0 +1,43 @@
+{
+  "captured_on": "2026-05-02",
+  "wire_theory_ms": 2.691,
+  "cases": [
+    {
+      "mode": "one-shot open/read/close",
+      "sleep_ms": null,
+      "p50_ms": 24.8,
+      "p95_ms": 26.2,
+      "max_ms": 26.3,
+      "n": 12,
+      "notes": "fresh connection each call"
+    },
+    {
+      "mode": "tight loop",
+      "sleep_ms": 0,
+      "p50_ms": 145.11,
+      "p95_ms": 145.24,
+      "max_ms": 145.4,
+      "n": 20,
+      "notes": "single open session"
+    },
+    {
+      "mode": "paced loop",
+      "sleep_ms": 100,
+      "p50_ms": 44.81,
+      "p95_ms": 45.25,
+      "max_ms": 145.2,
+      "n": 8,
+      "notes": "profile-serial output"
+    },
+    {
+      "mode": "paced loop",
+      "sleep_ms": 160,
+      "p50_ms": 126.01,
+      "p95_ms": 127.76,
+      "max_ms": 132.96,
+      "n": 12,
+      "notes": "raw loop with 160 ms sleep"
+    }
+  ],
+  "timing_note": "Host-side timestamps from Python perf_counter around write+read only."
+}

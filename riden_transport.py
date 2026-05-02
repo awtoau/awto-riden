@@ -293,40 +293,95 @@ class SerialTransport(RidenTransport):
         return regs
 
     def write(self, register: int, value: int) -> None:
-        if self._client is None:
-            raise IOError("transport not open")
-        last_exc: Exception | None = None
-        for _ in range(self._retries):
-            try:
-                resp = self._client.write_register(
-                    address=register, value=value, device_id=self._address
-                )
-                if resp.isError():
-                    raise ModbusException(f"write error at reg={register}: {resp}")
-                return
-            except Exception as exc:
-                last_exc = exc
-        raise TimeoutError(
-            f"modbus write reg={register} value={value} failed after {self._retries} retries"
-        ) from last_exc
+        if self._client is not None:
+            last_exc: Exception | None = None
+            for _ in range(self._retries):
+                try:
+                    resp = self._client.write_register(
+                        address=register, value=value, device_id=self._address
+                    )
+                    if resp.isError():
+                        raise ModbusException(f"write error at reg={register}: {resp}")
+                    return
+                except Exception as exc:
+                    last_exc = exc
+            raise TimeoutError(
+                f"modbus write reg={register} value={value} failed after {self._retries} retries"
+            ) from last_exc
+
+        if self._serial is not None:
+            last_exc: Exception | None = None
+            for _ in range(self._retries):
+                try:
+                    pdu = struct.pack(">BBHH", self._address, 0x06, register, value)
+                    req = pdu + struct.pack("<H", self._crc16(pdu))
+                    self._serial.write(req)
+                    resp = self._serial.read(8)
+                    if len(resp) != 8:
+                        raise IOError(f"short FC06 response: {len(resp)} bytes")
+                    if self._crc16(resp[:-2]) != struct.unpack("<H", resp[-2:])[0]:
+                        raise IOError("FC06 response CRC mismatch")
+                    if resp[:6] != req[:6]:
+                        raise IOError("FC06 echo mismatch")
+                    return
+                except Exception as exc:
+                    last_exc = exc
+            raise TimeoutError(
+                f"raw serial write reg={register} value={value} failed after {self._retries} retries"
+            ) from last_exc
+
+        raise IOError("transport not open")
 
     def write_multiple(self, register: int, values: tuple | list) -> None:
-        if self._client is None:
-            raise IOError("transport not open")
-        last_exc: Exception | None = None
-        for _ in range(self._retries):
-            try:
-                resp = self._client.write_registers(
-                    address=register, values=list(values), device_id=self._address
-                )
-                if resp.isError():
-                    raise ModbusException(f"write_multiple error at reg={register}: {resp}")
+        if self._client is not None:
+            last_exc: Exception | None = None
+            for _ in range(self._retries):
+                try:
+                    resp = self._client.write_registers(
+                        address=register, values=list(values), device_id=self._address
+                    )
+                    if resp.isError():
+                        raise ModbusException(f"write_multiple error at reg={register}: {resp}")
+                    return
+                except Exception as exc:
+                    last_exc = exc
+            raise TimeoutError(
+                f"modbus write_multiple reg={register} count={len(values)} failed after {self._retries} retries"
+            ) from last_exc
+
+        if self._serial is not None:
+            vals = list(values)
+            if not vals:
                 return
-            except Exception as exc:
-                last_exc = exc
-        raise TimeoutError(
-            f"modbus write_multiple reg={register} count={len(values)} failed after {self._retries} retries"
-        ) from last_exc
+            if len(vals) == 1:
+                self.write(register, int(vals[0]))
+                return
+
+            last_exc: Exception | None = None
+            qty = len(vals)
+            byte_count = qty * 2
+            payload = struct.pack(">BBHHB", self._address, 0x10, register, qty, byte_count)
+            payload += b"".join(struct.pack(">H", int(v) & 0xFFFF) for v in vals)
+            req = payload + struct.pack("<H", self._crc16(payload))
+            for _ in range(self._retries):
+                try:
+                    self._serial.write(req)
+                    resp = self._serial.read(8)
+                    if len(resp) != 8:
+                        raise IOError(f"short FC16 response: {len(resp)} bytes")
+                    if self._crc16(resp[:-2]) != struct.unpack("<H", resp[-2:])[0]:
+                        raise IOError("FC16 response CRC mismatch")
+                    addr, fn, start, echoed_qty = struct.unpack(">BBHH", resp[:6])
+                    if addr != self._address or fn != 0x10 or start != register or echoed_qty != qty:
+                        raise IOError("FC16 response mismatch")
+                    return
+                except Exception as exc:
+                    last_exc = exc
+            raise TimeoutError(
+                f"raw serial write_multiple reg={register} count={len(vals)} failed after {self._retries} retries"
+            ) from last_exc
+
+        raise IOError("transport not open")
 
 
 # ---------------------------------------------------------------------------

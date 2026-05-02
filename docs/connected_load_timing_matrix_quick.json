@@ -1,0 +1,246 @@
+{
+  "captured_on": "2026-05-02T00:46:27Z",
+  "port": "/dev/ttyUSB0",
+  "baud": 115200,
+  "address": 1,
+  "setpoint": {
+    "voltage": 12.0,
+    "current": 1.5
+  },
+  "samples_per_point": 8,
+  "poll_points_ms": [
+    100,
+    150
+  ],
+  "results": [
+    {
+      "poll_ms": 100,
+      "samples_ok": 8,
+      "samples_err": 0,
+      "interrupted": false,
+      "timeout_rate": 0.0,
+      "rtt": {
+        "min_ms": 139.169,
+        "p50_ms": 146.49,
+        "p90_ms": 147.154,
+        "p95_ms": 147.154,
+        "max_ms": 147.255,
+        "mean_ms": 145.722,
+        "jitter_p95_minus_p50_ms": 0.664
+      },
+      "stability": {
+        "v_out_mean": 12.0,
+        "v_out_std": 0.0,
+        "i_out_mean": 0.55613,
+        "i_out_std": 0.000331
+      },
+      "rows": [
+        {
+          "ts": 1777682791.39014,
+          "rtt_ms": 139.1692300003342,
+          "loop_dt_ms": 139.17166000010184,
+          "v_out": 12.0,
+          "i_out": 0.557,
+          "p_out": 6.68,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777682791.5365949,
+          "rtt_ms": 146.45149599982688,
+          "loop_dt_ms": 146.45580199976393,
+          "v_out": 12.0,
+          "i_out": 0.556,
+          "p_out": 6.67,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777682791.6838522,
+          "rtt_ms": 147.2546129998591,
+          "loop_dt_ms": 147.25766199990176,
+          "v_out": 12.0,
+          "i_out": 0.556,
+          "p_out": 6.67,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777682791.830383,
+          "rtt_ms": 146.52825800021674,
+          "loop_dt_ms": 146.5310949997729,
+          "v_out": 12.0,
+          "i_out": 0.556,
+          "p_out": 6.67,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777682791.9766457,
+          "rtt_ms": 146.26046600005793,
+          "loop_dt_ms": 146.2623130000793,
+          "v_out": 12.0,
+          "i_out": 0.556,
+          "p_out": 6.67,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777682792.1238027,
+          "rtt_ms": 147.153812000397,
+          "loop_dt_ms": 147.1567150001647,
+          "v_out": 12.0,
+          "i_out": 0.556,
+          "p_out": 6.67,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777682792.2701542,
+          "rtt_ms": 146.34994199968787,
+          "loop_dt_ms": 146.3521010000477,
+          "v_out": 12.0,
+          "i_out": 0.556,
+          "p_out": 6.67,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777682792.4167643,
+          "rtt_ms": 146.60781800012046,
+          "loop_dt_ms": 146.60955700037448,
+          "v_out": 12.0,
+          "i_out": 0.556,
+          "p_out": 6.67,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        }
+      ]
+    },
+    {
+      "poll_ms": 150,
+      "samples_ok": 8,
+      "samples_err": 0,
+      "interrupted": false,
+      "timeout_rate": 0.0,
+      "rtt": {
+        "min_ms": 132.786,
+        "p50_ms": 142.692,
+        "p90_ms": 146.529,
+        "p95_ms": 146.529,
+        "max_ms": 557.437,
+        "mean_ms": 192.903,
+        "jitter_p95_minus_p50_ms": 3.837
+      },
+      "stability": {
+        "v_out_mean": 12.0013,
+        "v_out_std": 0.00331,
+        "i_out_mean": 0.55525,
+        "i_out_std": 0.000433
+      },
+      "rows": [
+        {
+          "ts": 1777682792.563437,
+          "rtt_ms": 146.5291039994554,
+          "loop_dt_ms": 146.5293669998573,
+          "v_out": 12.0,
+          "i_out": 0.555,
+          "p_out": 6.66,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777682792.7092412,
+          "rtt_ms": 142.27979600036633,
+          "loop_dt_ms": 145.80381300038425,
+          "v_out": 12.0,
+          "i_out": 0.556,
+          "p_out": 6.67,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777682792.8560867,
+          "rtt_ms": 139.07221299996309,
+          "loop_dt_ms": 146.84580599987385,
+          "v_out": 12.0,
+          "i_out": 0.555,
+          "p_out": 6.66,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777682793.002626,
+          "rtt_ms": 135.5451510007697,
+          "loop_dt_ms": 146.53923400055646,
+          "v_out": 12.0,
+          "i_out": 0.555,
+          "p_out": 6.66,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777682793.1499062,
+          "rtt_ms": 132.78625600014493,
+          "loop_dt_ms": 147.2800739993545,
+          "v_out": 12.0,
+          "i_out": 0.555,
+          "p_out": 6.66,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777682793.724614,
+          "rtt_ms": 557.4371330003487,
+          "loop_dt_ms": 574.707610000587,
+          "v_out": 12.0,
+          "i_out": 0.556,
+          "p_out": 6.67,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777682793.8710897,
+          "rtt_ms": 146.47346299989294,
+          "loop_dt_ms": 146.47565899940673,
+          "v_out": 12.01,
+          "i_out": 0.555,
+          "p_out": 6.66,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777682794.0177734,
+          "rtt_ms": 143.10484700035886,
+          "loop_dt_ms": 146.68377500038332,
+          "v_out": 12.0,
+          "i_out": 0.555,
+          "p_out": 6.66,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "Host-side timing (perf_counter) around worker.status() call.",
+    "Modbus RTU has no device timestamp fields; no exact device sample-time recovery.",
+    "Use p95 and timeout_rate to choose robust cadence under load."
+  ]
+}

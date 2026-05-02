@@ -967,6 +967,24 @@ def rd_daemon_info(psu: str = "default") -> dict[str, Any]:
         _raise_tool_error("info", e)
 
 
+@mcp.tool()
+def rd_profile_serial(count: int = 20, sleep_ms: int = 100, psu: str = "default") -> dict[str, Any]:
+    """Profile Modbus serial timing and return a stable polling recommendation.
+
+    Useful for USB and Bluetooth RFCOMM links to derive cadence tuned for
+    timestamp stability (not minimum RTT).
+
+    Args:
+        count:    Number of reads (default: 20).
+        sleep_ms: Inter-read delay during profiling in ms (default: 100).
+        psu:      PSU name (default: the default PSU).
+    """
+    try:
+        return _ensure_connected(psu).profile_serial(count=count, sleep_ms=sleep_ms)
+    except Exception as e:
+        _raise_tool_error("profile_serial", e)
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
