@@ -47,18 +47,46 @@ def _period_plot(ax, rows, label):
     v_out = np.array([r.get("v_out", 0.0) for r in rows])[order]
     i_out = np.array([r.get("i_out", 0.0) for r in rows])[order]
 
-    ax.plot(x, v_set, "--", linewidth=1.0, alpha=0.6, label="V_set")
-    ax.plot(x, v_out, "-", linewidth=1.4, label="V_out")
+    # Build smooth traces from sparse phase samples while keeping raw points visible.
+    xu, idx = np.unique(x, return_index=True)
+    vsu = v_set[idx]
+    vou = v_out[idx]
+    iou = i_out[idx]
+    if len(xu) >= 2:
+        x_dense = np.linspace(0.0, 1.0, 300)
+        vs_dense = np.interp(x_dense, xu, vsu)
+        vo_dense = np.interp(x_dense, xu, vou)
+        io_dense = np.interp(x_dense, xu, iou)
+    else:
+        x_dense = x
+        vs_dense = v_set
+        vo_dense = v_out
+        io_dense = i_out
+
+    ax.plot(x_dense, vs_dense, "--", linewidth=1.8, alpha=0.75, color="#4C90C0", label="V_set")
+    ax.plot(x_dense, vo_dense, "-", linewidth=2.2, color="#D06700", label="V_out")
+    ax.scatter(x, v_out, s=12, color="#D06700", alpha=0.6, zorder=3, label="V_out samples")
     ax.set_xlim(0, 1)
     ax.set_xlabel("Phase (0..1, one period)")
     ax.set_ylabel("Voltage (V)")
     ax.set_title(label)
-    ax.grid(True, alpha=0.25)
+    ax.grid(True, alpha=0.28)
+
+    v_min = min(float(np.min(v_set)), float(np.min(v_out)))
+    v_max = max(float(np.max(v_set)), float(np.max(v_out)))
+    pad = max(0.25, 0.08 * (v_max - v_min))
+    ax.set_ylim(v_min - pad, v_max + pad)
 
     ax2 = ax.twinx()
-    ax2.plot(x, i_out, "-", linewidth=1.0, alpha=0.85, color="#d62728", label="I_out")
+    ax2.plot(x_dense, io_dense, "-", linewidth=1.8, alpha=0.9, color="#CC2F2F", label="I_out")
+    ax2.scatter(x, i_out, s=10, color="#CC2F2F", alpha=0.5, zorder=3, label="I_out samples")
     ax2.set_ylabel("Current (A)", color="#d62728")
     ax2.tick_params(axis="y", labelcolor="#d62728")
+
+    i_min = float(np.min(i_out))
+    i_max = float(np.max(i_out))
+    i_pad = max(0.02, 0.12 * (i_max - i_min if i_max > i_min else 0.1))
+    ax2.set_ylim(i_min - i_pad, i_max + i_pad)
 
     overshoot = float(np.max(v_out - v_set)) if len(v_out) else 0.0
     ax.text(0.02, 0.92, f"max overshoot: {overshoot:.3f} V", transform=ax.transAxes, fontsize=8)
@@ -80,17 +108,29 @@ def _clip_plot(ax, rows):
     cv = np.array([r.get("cv_cc", "CV") for r in rows])
     prot = np.array([r.get("protect", "none") for r in rows])
 
-    ax.plot(t, v_set, "--", linewidth=1.0, alpha=0.6, label="V_set")
-    ax.plot(t, v_out, "-", linewidth=1.4, label="V_out")
+    ax.plot(t, v_set, "--", linewidth=1.8, alpha=0.75, color="#4C90C0", label="V_set")
+    ax.plot(t, v_out, "-", linewidth=2.2, color="#D06700", label="V_out")
+    ax.scatter(t, v_out, s=12, color="#D06700", alpha=0.6, zorder=3, label="V_out samples")
     ax.set_xlabel("Time (s)")
     ax.set_ylabel("Voltage (V)")
-    ax.grid(True, alpha=0.25)
+    ax.grid(True, alpha=0.28)
     ax.set_title("Sine under current limiting (clipping / CC transitions)")
 
+    v_min = min(float(np.min(v_set)), float(np.min(v_out)))
+    v_max = max(float(np.max(v_set)), float(np.max(v_out)))
+    pad = max(0.25, 0.08 * (v_max - v_min))
+    ax.set_ylim(v_min - pad, v_max + pad)
+
     ax2 = ax.twinx()
-    ax2.plot(t, i_out, "-", linewidth=1.0, alpha=0.85, color="#d62728", label="I_out")
+    ax2.plot(t, i_out, "-", linewidth=1.8, alpha=0.9, color="#CC2F2F", label="I_out")
+    ax2.scatter(t, i_out, s=10, color="#CC2F2F", alpha=0.5, zorder=3, label="I_out samples")
     ax2.set_ylabel("Current (A)", color="#d62728")
     ax2.tick_params(axis="y", labelcolor="#d62728")
+
+    i_min = float(np.min(i_out))
+    i_max = float(np.max(i_out))
+    i_pad = max(0.01, 0.12 * (i_max - i_min if i_max > i_min else 0.05))
+    ax2.set_ylim(i_min - i_pad, i_max + i_pad)
 
     in_cc = cv == "CC"
     if np.any(in_cc):
@@ -122,6 +162,8 @@ def _clip_plot(ax, rows):
 
 def main() -> int:
     in_dir = Path("docs")
+    period_png = in_dir / "mr11_waveform_tracking_one_period_view_same_settings_overshoot_visible.png"
+    clip_png = in_dir / "mr11_sine_under_current_limiting_clipping_cc_transitions.png"
 
     period_sets = [
         (in_dir / "mr11_sine_period.jsonl", "Sine (period-wide)"),
@@ -138,18 +180,16 @@ def main() -> int:
     )
     for ax, (path, label) in zip(axes, period_sets):
         _period_plot(ax, load(path), label)
-    out_period = in_dir / "mr11_period_wide.png"
-    plt.savefig(out_period, dpi=160, bbox_inches="tight")
+    plt.savefig(period_png, dpi=160, bbox_inches="tight")
     plt.close(fig)
-    print(f"Saved: {out_period}")
+    print(f"Saved: {period_png}")
 
     clip_rows = load(in_dir / "mr11_sine_clipped_current_limit.jsonl")
     fig, ax = plt.subplots(1, 1, figsize=(13, 5.6), tight_layout=True)
     _clip_plot(ax, clip_rows)
-    out_clip = in_dir / "mr11_current_limit_clip.png"
-    plt.savefig(out_clip, dpi=160, bbox_inches="tight")
+    plt.savefig(clip_png, dpi=160, bbox_inches="tight")
     plt.close(fig)
-    print(f"Saved: {out_clip}")
+    print(f"Saved: {clip_png}")
     return 0
 
 
