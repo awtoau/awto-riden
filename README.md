@@ -11,6 +11,22 @@ This repository provides a direct serial control stack for AI agents and humans:
 
 No external `riden` pip package is required. Transport and register logic are vendored here.
 
+## Capabilities at a glance
+
+Fastest mode (no cadence sleep) and paced cadences under connected load are now
+captured in one combined graph:
+
+![Connected-load timing capabilities](docs/timing_capabilities_overview.png)
+
+Latest measured set summary:
+[docs/timing_test_set_summary.md](docs/timing_test_set_summary.md)
+
+Regenerate all timing artifacts in one command:
+
+```bash
+./scripts/regenerate_timing_artifacts.sh /dev/ttyUSB0 12 1.5
+```
+
 ## Quick start
 
 ```bash
@@ -82,7 +98,7 @@ Use distribution statistics, not one sample:
 For poll interval selection, prefer:
 
 $$
-	ext{poll\_ms} \approx \text{p95} + \text{headroom}
+  ext{poll\_ms} \approx \text{p95} + \text{headroom}
 $$
 
 Then quantize to practical scheduler buckets (20 ms or 50 ms).
@@ -112,14 +128,31 @@ Profiler output fields include:
 
 ## Connected-load timing matrix
 
-For characterization-grade testing with a real load, use the dedicated matrix runner:
+For characterization-grade testing with a real load, use either the full test-set
+runner (quick + comprehensive + analysis) or the direct matrix runner.
+
+Recommended one-command test set (includes fastest/no-cadence point `0 ms`):
+
+```bash
+source .venv/bin/activate
+python3 scripts/timing_test_set.py \
+  --port /dev/ttyUSB0 \
+  --voltage 12 --current 1.5 \
+  --mode both \
+  --quick-samples 12 \
+  --comprehensive-samples 80 \
+  --quick-poll-ms 0,100,150 \
+  --comprehensive-poll-ms 0,20,50,100,150
+```
+
+Direct matrix runner:
 
 ```bash
 source .venv/bin/activate
 python3 scripts/connected_load_timing_matrix.py \
   --port /dev/ttyUSB0 \
   --voltage 12 --current 1.5 \
-  --poll-ms 20,50,100,150,200 \
+  --poll-ms 0,20,50,100,150 \
   --samples 120 \
   --settle-s 3 \
   --out docs/connected_load_timing_matrix
@@ -127,9 +160,14 @@ python3 scripts/connected_load_timing_matrix.py \
 
 Outputs:
 
-- `docs/connected_load_timing_matrix.json`
-- `docs/connected_load_timing_matrix.rtt.png`
-- `docs/connected_load_timing_matrix.timeout.png`
+- `docs/connected_load_timing_matrix_quick.json`
+- `docs/connected_load_timing_matrix_quick.rtt.png`
+- `docs/connected_load_timing_matrix_quick.timeout.png`
+- `docs/connected_load_timing_matrix_comprehensive.json`
+- `docs/connected_load_timing_matrix_comprehensive.rtt.png`
+- `docs/connected_load_timing_matrix_comprehensive.timeout.png`
+- `docs/timing_test_set_summary.md`
+- `docs/timing_capabilities_overview.png`
 
 Why this is preferred over tiny sample sets:
 
