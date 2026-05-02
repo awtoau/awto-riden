@@ -20,6 +20,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 import struct
 import time
+from pathlib import Path
 
 from pymodbus.client import ModbusSerialClient
 from pymodbus.exceptions import ModbusException
@@ -129,8 +130,28 @@ class SerialTransport(RidenTransport):
     # Lifecycle
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _is_ch341(port: str) -> bool:
+        """Return True if port is backed by a CH341 USB serial chip (VID 1a86)."""
+        try:
+            # Resolve the sysfs path from the tty device name.
+            devname = Path(port).name  # e.g. ttyUSB0
+            sysfs = Path(f"/sys/bus/usb-serial/devices/{devname}")
+            if not sysfs.exists():
+                return False
+            # Walk up to find the USB device directory with idVendor.
+            usb_dev = sysfs.resolve().parents[2]  # .../1-7.4:1.0 -> .../1-7.4
+            vendor_file = usb_dev / "idVendor"
+            if vendor_file.exists():
+                return vendor_file.read_text().strip().lower() == "1a86"
+        except Exception:
+            pass
+        return False
+
     def open(self) -> None:
-        if self._use_raw_serial:
+        # Auto-prefer raw serial for CH341 chips — they don't support TIOCEXCL
+        # and pymodbus will always fail with EAGAIN before we can even connect.
+        if self._use_raw_serial or self._is_ch341(self._port):
             self._open_raw_serial()
         else:
             self._open_pymodbus()
@@ -146,7 +167,10 @@ class SerialTransport(RidenTransport):
                 stopbits=1,
                 timeout=self._timeout,
             )
-            time.sleep(0.1)
+            # CH341 sends a spurious line-status frame on open; flush it.
+            time.sleep(0.05)
+            self._serial.reset_input_buffer()
+            self._serial.reset_output_buffer()
         except Exception as e:
             raise IOError(f"failed to open raw serial {self._port}: {e}")
     
@@ -245,20 +269,25 @@ class SerialTransport(RidenTransport):
     def _read_raw_serial(self, register: int, count: int) -> tuple[int, ...]:
         """Raw Modbus RTU FC03 read (handles ch341 exclusive lock issue)."""
         last_exc: Exception | None = None
-        for _ in range(self._retries):
+        for attempt in range(self._retries):
             try:
+                # Flush any stale bytes before each attempt (CH341 can leave
+                # line-status bytes in the buffer between transactions).
+                self._serial.reset_input_buffer()
                 request = self._build_fc03_request(register, count)
                 self._serial.write(request)
                 expected_bytes = 5 + count * 2
                 response = self._serial.read(expected_bytes)
                 if len(response) < expected_bytes:
-                    raise IOError(f"short response: {len(response)} bytes")
+                    raise IOError(f"short response: {len(response)} bytes (attempt {attempt+1})")
                 regs = self._parse_fc03_response(response, count)
                 if regs is None:
                     raise IOError("FC03 response parsing failed")
                 return tuple(regs)
             except Exception as exc:
                 last_exc = exc
+                # Brief pause before retry so CH341 settles.
+                time.sleep(0.02)
         raise TimeoutError(
             f"raw serial read reg={register} count={count} failed after {self._retries} retries"
         ) from last_exc

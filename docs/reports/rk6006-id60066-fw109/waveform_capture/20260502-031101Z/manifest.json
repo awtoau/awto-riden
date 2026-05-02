@@ -1,0 +1,28 @@
+{
+  "report_kind": "waveform_capture",
+  "report_title": "Waveform Capture RK6006 20260502-031101Z",
+  "created_utc": "2026-05-02T03:11:01Z",
+  "run_dir": "rk6006-id60066-fw109/waveform_capture/20260502-031101Z",
+  "report_path": "rk6006-id60066-fw109/waveform_capture/20260502-031101Z/report.md",
+  "device": {
+    "type": "RK6006",
+    "id": 60066,
+    "fw": 109,
+    "sn": "00001036",
+    "port": "/dev/ttyUSB0",
+    "baud": 115200,
+    "address": 1
+  },
+  "artifacts": [
+    "rk6006-id60066-fw109/waveform_capture/20260502-031101Z/report.md",
+    "rk6006-id60066-fw109/waveform_capture/20260502-031101Z/mr11_sine_period.jsonl",
+    "rk6006-id60066-fw109/waveform_capture/20260502-031101Z/mr11_triangle_period.jsonl",
+    "rk6006-id60066-fw109/waveform_capture/20260502-031101Z/mr11_sawtooth_period.jsonl",
+    "rk6006-id60066-fw109/waveform_capture/20260502-031101Z/mr11_square_period.jsonl",
+    "rk6006-id60066-fw109/waveform_capture/20260502-031101Z/mr11_sine_clipped_current_limit.jsonl",
+    "rk6006-id60066-fw109/waveform_capture/20260502-031101Z/mr11_current_limit_demo_sine_0_12v_i200ma.jsonl",
+    "rk6006-id60066-fw109/waveform_capture/20260502-031101Z/mr11_current_limit_demo_fixed_12v_i300ma.jsonl"
+  ],
+  "script": "scripts/waveform_capture.py",
+  "device_slug": "rk6006-id60066-fw109"
+}

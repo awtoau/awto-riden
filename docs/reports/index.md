@@ -1,9 +1,10 @@
 # Riden Test Reports Index
 
-Updated: 2026-05-02 02:17:14 UTC
+Updated: 2026-05-02 03:11:01 UTC
 
 | Date (UTC) | Kind | Device | FW | Port | Report |
 |---|---|---|---|---|---|
+| 2026-05-02T03:11:01Z | waveform_capture | RK6006 | 109 | /dev/ttyUSB0 | [Waveform Capture RK6006 20260502-031101Z](rk6006-id60066-fw109/waveform_capture/20260502-031101Z/report.md) |
 | 2026-05-02T02:17:14Z | timing_matrix | RK6006 | 109 | /dev/ttyUSB0 | [Timing Matrix RK6006 20260502-021700Z](rk6006-id60066-fw109/timing_matrix/20260502-021700Z/report.md) |
 | 2026-05-02T02:16:53Z | timing_matrix | RK6006 | 109 | /dev/ttyUSB0 | [Timing Matrix RK6006 20260502-021637Z](rk6006-id60066-fw109/timing_matrix/20260502-021637Z/report.md) |
 | 2026-05-02T02:16:27Z | timing_matrix | RK6006 | 109 | /dev/ttyUSB0 | [Timing Matrix RK6006 20260502-021620Z](rk6006-id60066-fw109/timing_matrix/20260502-021620Z/report.md) |
