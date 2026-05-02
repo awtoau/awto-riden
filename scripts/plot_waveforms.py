@@ -180,11 +180,65 @@ def _cc_demo_plot(ax, rows, title):
     ax.legend(h1 + h2, l1 + l2, loc="upper right", fontsize=8, framealpha=0.9)
 
 
+_CC_FRACTION_CLIP_THRESHOLD = 0.10  # >= 10 % CC samples → use clip-style plot
+
+
+def _detect_plot_type(rows: list) -> str:
+    """Return 'period', 'clip', or 'cc_demo' based on JSONL content."""
+    if not rows:
+        return "cc_demo"
+    shape = rows[0].get("shape", "dc")
+    if shape == "dc":
+        return "cc_demo"
+    cc_frac = sum(1 for r in rows if r.get("cv_cc") == "CC") / len(rows)
+    return "clip" if cc_frac >= _CC_FRACTION_CLIP_THRESHOLD else "period"
+
+
+def plot_jsonl(path, out_png=None) -> Path:
+    """Auto-detect plot type from a single waveform JSONL and save a PNG.
+
+    Rules
+    -----
+    - shape == 'dc'                              → time-series CC demo plot
+    - waveform shape, CC fraction >= 10 %        → clipping / CC transition plot
+    - waveform shape, CC fraction <  10 %        → 1.5-cycle period-tracking plot
+
+    Returns the Path of the written PNG.
+    """
+    path = Path(path)
+    rows = load(path)
+    kind = _detect_plot_type(rows)
+    shape = rows[0].get("shape", "dc") if rows else "dc"
+
+    if out_png is None:
+        out_png = path.with_suffix(".png")
+    out_png = Path(out_png)
+
+    if kind == "period":
+        label = f"{shape.capitalize()} (period tracking)"
+        fig, ax = plt.subplots(1, 1, figsize=(13, 5), tight_layout=True)
+        fig.suptitle(f"MR11 waveform tracking — {label}", fontsize=11, fontweight="bold")
+        _period_plot(ax, rows, label)
+    elif kind == "clip":
+        fig, ax = plt.subplots(1, 1, figsize=(13, 5.6), tight_layout=True)
+        fig.suptitle(f"MR11 current-limiting clip — {shape}", fontsize=11, fontweight="bold")
+        _clip_plot(ax, rows)
+    else:  # cc_demo
+        title = f"{shape.capitalize()} waveform — CC demo"
+        fig, ax = plt.subplots(1, 1, figsize=(13, 5), tight_layout=True)
+        fig.suptitle(title, fontsize=11, fontweight="bold")
+        _cc_demo_plot(ax, rows, title)
+
+    plt.savefig(out_png, dpi=160, bbox_inches="tight")
+    plt.close(fig)
+    return out_png
+
+
 def main() -> int:
     in_dir = Path("docs")
-    period_png = in_dir / "mr11_waveform_tracking_at_least_1p5_cycle_view_same_settings_overshoot_visible.png"
-    clip_png = in_dir / "mr11_sine_under_current_limiting_clipping_cc_transitions.png"
-    cc_demo_png = in_dir / "mr11_current_limit_demo_i200ma_sine_0_12v_and_i300ma_fixed_12v.png"
+    period_png = in_dir / "mr11_waveform_tracking.png"
+    clip_png   = in_dir / "mr11_sine_clipping.png"
+    cc_demo_png = in_dir / "mr11_cc_demo.png"
 
     period_sets = [
         (in_dir / "mr11_sine_period.jsonl", "Sine (period-wide)"),
@@ -231,4 +285,17 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    import argparse as _ap
+    _p = _ap.ArgumentParser(description="Plot waveform JSONL files")
+    _p.add_argument("files", nargs="*", metavar="FILE.jsonl",
+                    help="One or more JSONL files to auto-plot. "
+                         "Omit to regenerate the standard combo charts.")
+    _p.add_argument("--out", metavar="OUT.png",
+                    help="Output PNG (only valid with a single input file).")
+    _args = _p.parse_args()
+    if _args.files:
+        for _f in _args.files:
+            _out = plot_jsonl(_f, _args.out if len(_args.files) == 1 else None)
+            print(f"Saved: {_out}")
+        raise SystemExit(0)
     raise SystemExit(main())

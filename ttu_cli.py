@@ -173,12 +173,42 @@ def main() -> None:
     sp_prof.add_argument("--count", type=int, default=20, metavar="N", help="number of reads (default: 20)")
     sp_prof.add_argument("--sleep-ms", type=int, default=100, metavar="MS", help="inter-read delay during profiling (default: 100)")
 
+    sp_plot = sub.add_parser(
+        "plot",
+        help="auto-plot one or more waveform JSONL files (shape detected from data)",
+        formatter_class=_F,
+    )
+    sp_plot.add_argument(
+        "files", nargs="+", metavar="FILE.jsonl",
+        help="JSONL files captured by waveform_capture.py",
+    )
+    sp_plot.add_argument(
+        "--out", metavar="OUT.png",
+        help="Output PNG path (only valid when a single file is given)",
+    )
+
     args = ap.parse_args()
     if args.subcmd is None:
         ap.print_help()
         sys.exit(2)
 
     _setup_logging(args.verbose)
+
+    # The 'plot' subcommand is offline — no PSU connection needed.
+    if args.subcmd == "plot":
+        import sys as _sys
+        from pathlib import Path as _Path
+        _scripts = str(_Path(__file__).resolve().parent / "scripts")
+        if _scripts not in _sys.path:
+            _sys.path.insert(0, _scripts)
+        from plot_waveforms import plot_jsonl
+        saved = []
+        for _f in args.files:
+            _out = plot_jsonl(_f, args.out if len(args.files) == 1 else None)
+            print(f"Saved: {_out}")
+            saved.append(str(_out))
+        print(json.dumps({"ok": True, "saved": saved}, indent=2))
+        return
 
     # Open serial connection
     try:
