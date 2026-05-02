@@ -1,0 +1,20 @@
+{
+  "report_kind": "timing_matrix",
+  "report_title": "Timing Matrix mr11_safe_cadence",
+  "created_utc": "2026-05-02T02:13:24Z",
+  "run_dir": "rk6006-idunknown-fwunknown/timing_matrix/20260502-011203Z-mr11_safe_cadence",
+  "report_path": "rk6006-idunknown-fwunknown/timing_matrix/20260502-011203Z-mr11_safe_cadence/report.md",
+  "device": {
+    "type": "RK6006",
+    "id": "unknown",
+    "fw": "unknown",
+    "sn": "unknown"
+  },
+  "artifacts": [
+    "rk6006-idunknown-fwunknown/timing_matrix/20260502-011203Z-mr11_safe_cadence/report.md",
+    "rk6006-idunknown-fwunknown/timing_matrix/20260502-011203Z-mr11_safe_cadence/timing_matrix.json",
+    "rk6006-idunknown-fwunknown/timing_matrix/20260502-011203Z-mr11_safe_cadence/timing_matrix.rtt.png",
+    "rk6006-idunknown-fwunknown/timing_matrix/20260502-011203Z-mr11_safe_cadence/timing_matrix.timeout.png"
+  ],
+  "source_json": "docs/mr11_safe_cadence.json"
+}

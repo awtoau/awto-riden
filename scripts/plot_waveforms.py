@@ -276,7 +276,7 @@ def plot_jsonl(path, out_png=None) -> Path:
 
 
 def main() -> int:
-    in_dir = Path("docs")
+    in_dir = Path("docs/data")
     period_png  = in_dir / "mr11_waveform_tracking.png"
     clip_png    = in_dir / "mr11_waveform_clipping.png"
     cc_demo_png = in_dir / "mr11_waveform_cc_demo.png"

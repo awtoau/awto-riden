@@ -1,0 +1,370 @@
+{
+  "captured_on": "2026-05-02T02:15:24Z",
+  "port": "/dev/ttyUSB0",
+  "baud": 115200,
+  "address": 1,
+  "setpoint": {
+    "voltage": 12.0,
+    "current": 1.5
+  },
+  "read_mode": "fast",
+  "samples_per_point": 80,
+  "poll_points_ms": [
+    0,
+    20,
+    50,
+    100,
+    150
+  ],
+  "results": [
+    {
+      "poll_ms": 0,
+      "samples_ok": 28,
+      "samples_err": 0,
+      "interrupted": true,
+      "timeout_rate": 0.0,
+      "rtt": {
+        "min_ms": 139.201,
+        "p50_ms": 145.06,
+        "p90_ms": 145.208,
+        "p95_ms": 145.217,
+        "max_ms": 145.337,
+        "mean_ms": 144.662,
+        "jitter_p95_minus_p50_ms": 0.157
+      },
+      "stability": {
+        "v_out_mean": 12.0029,
+        "v_out_std": 0.00452,
+        "i_out_mean": 0.60164,
+        "i_out_std": 0.00142
+      },
+      "rows": [
+        {
+          "ts": 1777688129.237793,
+          "rtt_ms": 139.20136300112063,
+          "loop_dt_ms": 139.20403600059217,
+          "v_out": 12.01,
+          "i_out": 0.603,
+          "p_out": 7.24,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777688129.382918,
+          "rtt_ms": 145.11938000032387,
+          "loop_dt_ms": 145.125705999817,
+          "v_out": 12.0,
+          "i_out": 0.603,
+          "p_out": 7.23,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777688129.5280442,
+          "rtt_ms": 145.12229100000695,
+          "loop_dt_ms": 145.12633399863262,
+          "v_out": 12.0,
+          "i_out": 0.602,
+          "p_out": 7.22,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777688129.673127,
+          "rtt_ms": 145.07914400019217,
+          "loop_dt_ms": 145.08288300021377,
+          "v_out": 12.0,
+          "i_out": 0.602,
+          "p_out": 7.22,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777688129.8181791,
+          "rtt_ms": 145.04830400073843,
+          "loop_dt_ms": 145.05212100084464,
+          "v_out": 12.0,
+          "i_out": 0.601,
+          "p_out": 7.21,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777688129.9632354,
+          "rtt_ms": 145.05334700152162,
+          "loop_dt_ms": 145.0567760002741,
+          "v_out": 12.01,
+          "i_out": 0.601,
+          "p_out": 7.21,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777688130.1083422,
+          "rtt_ms": 145.104026001718,
+          "loop_dt_ms": 145.1070040002378,
+          "v_out": 12.0,
+          "i_out": 0.603,
+          "p_out": 7.23,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777688130.2536829,
+          "rtt_ms": 145.33731000119587,
+          "loop_dt_ms": 145.33993999975792,
+          "v_out": 12.01,
+          "i_out": 0.603,
+          "p_out": 7.24,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777688130.3987422,
+          "rtt_ms": 145.05555600044318,
+          "loop_dt_ms": 145.0593179997668,
+          "v_out": 12.01,
+          "i_out": 0.604,
+          "p_out": 7.25,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777688130.5439258,
+          "rtt_ms": 145.1801200000773,
+          "loop_dt_ms": 145.18391099954897,
+          "v_out": 12.0,
+          "i_out": 0.604,
+          "p_out": 7.24,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777688130.6888876,
+          "rtt_ms": 144.95836700007203,
+          "loop_dt_ms": 144.96166999924753,
+          "v_out": 12.0,
+          "i_out": 0.604,
+          "p_out": 7.24,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777688130.834001,
+          "rtt_ms": 145.11028899869416,
+          "loop_dt_ms": 145.11368300009053,
+          "v_out": 12.0,
+          "i_out": 0.603,
+          "p_out": 7.23,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777688130.9790685,
+          "rtt_ms": 145.06398400044418,
+          "loop_dt_ms": 145.06709300076182,
+          "v_out": 12.01,
+          "i_out": 0.602,
+          "p_out": 7.23,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777688131.124199,
+          "rtt_ms": 145.1269620010862,
+          "loop_dt_ms": 145.13046700085397,
+          "v_out": 12.0,
+          "i_out": 0.601,
+          "p_out": 7.21,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777688131.269373,
+          "rtt_ms": 145.1701169989974,
+          "loop_dt_ms": 145.17404699836334,
+          "v_out": 12.0,
+          "i_out": 0.6,
+          "p_out": 7.2,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777688131.4146426,
+          "rtt_ms": 145.26628800012986,
+          "loop_dt_ms": 145.26988200123014,
+          "v_out": 12.0,
+          "i_out": 0.6,
+          "p_out": 7.2,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777688131.559854,
+          "rtt_ms": 145.2075209999748,
+          "loop_dt_ms": 145.21101799982716,
+          "v_out": 12.0,
+          "i_out": 0.6,
+          "p_out": 7.2,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777688131.7048411,
+          "rtt_ms": 144.9834409995674,
+          "loop_dt_ms": 144.98727499994857,
+          "v_out": 12.0,
+          "i_out": 0.6,
+          "p_out": 7.2,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777688131.8499293,
+          "rtt_ms": 145.08472499983327,
+          "loop_dt_ms": 145.0882549997914,
+          "v_out": 12.0,
+          "i_out": 0.602,
+          "p_out": 7.22,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777688131.9951499,
+          "rtt_ms": 145.21663400046236,
+          "loop_dt_ms": 145.22003199999745,
+          "v_out": 12.0,
+          "i_out": 0.603,
+          "p_out": 7.23,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777688132.1400733,
+          "rtt_ms": 144.91919700049039,
+          "loop_dt_ms": 144.92450000034296,
+          "v_out": 12.0,
+          "i_out": 0.601,
+          "p_out": 7.21,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777688132.2843535,
+          "rtt_ms": 144.27750399954675,
+          "loop_dt_ms": 144.28014599980088,
+          "v_out": 12.01,
+          "i_out": 0.6,
+          "p_out": 7.2,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777688132.4285214,
+          "rtt_ms": 144.1611059999559,
+          "loop_dt_ms": 144.16403299946978,
+          "v_out": 12.01,
+          "i_out": 0.6,
+          "p_out": 7.2,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777688132.5726914,
+          "rtt_ms": 144.1664359990682,
+          "loop_dt_ms": 144.17356699959782,
+          "v_out": 12.0,
+          "i_out": 0.601,
+          "p_out": 7.21,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777688132.7168279,
+          "rtt_ms": 144.13348400012183,
+          "loop_dt_ms": 144.13646100001642,
+          "v_out": 12.0,
+          "i_out": 0.602,
+          "p_out": 7.22,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777688132.861002,
+          "rtt_ms": 144.17080600105692,
+          "loop_dt_ms": 144.17429900095158,
+          "v_out": 12.0,
+          "i_out": 0.599,
+          "p_out": 7.18,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777688133.0051966,
+          "rtt_ms": 144.19194599940965,
+          "loop_dt_ms": 144.19473399902927,
+          "v_out": 12.01,
+          "i_out": 0.6,
+          "p_out": 7.2,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        },
+        {
+          "ts": 1777688133.1492276,
+          "rtt_ms": 144.0276379998977,
+          "loop_dt_ms": 144.03074700021534,
+          "v_out": 12.0,
+          "i_out": 0.602,
+          "p_out": 7.22,
+          "cv_cc": "CV",
+          "protect": "none",
+          "output": true
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "Host-side timing (perf_counter) around worker.status() call.",
+    "Modbus RTU has no device timestamp fields; no exact device sample-time recovery.",
+    "Use p95 and timeout_rate to choose robust cadence under load."
+  ],
+  "device": {
+    "type": "RK6006",
+    "id": 60066,
+    "sn": "00001036",
+    "fw": 109,
+    "port": "/dev/ttyUSB0",
+    "baud": 115200,
+    "address": 1,
+    "transport": "usb-serial"
+  },
+  "run_stamp": "20260502-021524Z",
+  "normalized_output_prefix": "docs/connected_load_timing_matrix_comprehensive"
+}

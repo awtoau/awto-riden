@@ -211,6 +211,12 @@ class SerialTransport(RidenTransport):
     # ------------------------------------------------------------------
     # Modbus operations
     # ------------------------------------------------------------------
+    # NOTE: measured RTT is ~143 ms regardless of register count or baud rate.
+    # This is the RD6006 firmware scan period (~7 Hz). The device only refreshes
+    # its Modbus registers once per firmware cycle and queues replies behind that
+    # cycle, so there is no way to get a faster response at the protocol level.
+    # After a write(), wait at least 2 × 143 ms (~300 ms) before reading back
+    # a settled measurement.
 
     def read(self, register: int, count: int = 1) -> tuple[int, ...]:
         if self._client is not None:

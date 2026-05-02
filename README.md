@@ -16,7 +16,7 @@ No external `riden` pip package is required. Transport and register logic are ve
 Fastest mode (no cadence sleep) and paced cadences under connected load are now
 captured in one combined graph:
 
-![Connected-load timing capabilities](docs/timing_capabilities_overview.png)
+![Connected-load timing capabilities](docs/data/timing_capabilities_overview.png)
 
 Latest measured set summary:
 [docs/timing_test_set_summary.md](docs/timing_test_set_summary.md)
@@ -42,18 +42,18 @@ python3 ttu_cli.py --port /dev/ttyUSB0 profile-serial --count 20 --sleep-ms 100
 ## Timing graphs (updated)
 
 The graphs below were regenerated from session measurements and summarized in
-[docs/serial_timing_profile.json](docs/serial_timing_profile.json).
+[docs/serial_timing_profile.json](docs/data/serial_timing_profile.json).
 
 For the dedicated MR11 waveform/timing page, see:
 [docs/mr11_sine_test.md](docs/mr11_sine_test.md)
 
 ### 1) Poll pacing vs measured RTT
 
-![Serial timing cadence sweep](docs/serial_timing_cadence_sweep.png)
+![Serial timing cadence sweep](docs/data/serial_timing_cadence_sweep.png)
 
 ### 2) Mode comparison with jitter bars
 
-![Serial timing mode comparison](docs/serial_timing_mode_comparison.png)
+![Serial timing mode comparison](docs/data/serial_timing_mode_comparison.png)
 
 Interpretation:
 
@@ -61,6 +61,34 @@ Interpretation:
 - Measured behavior is much higher and mode-dependent.
 - Tight polling and paced polling can land in different scheduler phases.
 - For control/logging, stable cadence is usually more important than minimum RTT.
+
+## Why every read takes ~143 ms (the firmware scan floor)
+
+You may notice that measured RTT is ~143 ms regardless of which registers you read,
+how many you request, or how long the wire transfer takes.  This is not a code bug
+and is not caused by the USB adapter.
+
+**Root cause: the RD6006 firmware measurement scan runs at ~7 Hz (~143 ms/cycle).**
+
+The PSU's embedded firmware samples its ADCs and refreshes its Modbus holding
+registers once per firmware cycle, not on demand.  When the host issues a Modbus
+read, the device does not reply immediately — it waits until the current firmware
+cycle completes and the registers are refreshed, then sends the response.  This
+produces a near-constant ~143 ms floor on every transaction regardless of register
+count or baud rate.
+
+**Consequence for set → read sequences:**
+
+After a `write_register` (e.g. changing V_SET), the write acknowledgement also takes
+~143 ms because it is queued behind the same firmware cycle.  The output hardware
+reacts to the new setpoint almost immediately after the write is accepted, but
+`v_out` and `i_out` readings will not reflect the new settled state until the *next*
+firmware cycle — meaning you need to wait at least **one additional 143 ms cycle**
+(~300 ms total) after a setpoint change before reading back a stable measurement.
+Waiting two cycles (~300 ms) is a safe rule of thumb for settled readings.
+
+This is an intrinsic hardware limit of the RD6006 firmware and cannot be improved
+by tuning baud rate, USB latency timer, or pymodbus settings.
 
 ## Timing accuracy and timestamp semantics
 
@@ -155,19 +183,19 @@ python3 scripts/connected_load_timing_matrix.py \
   --poll-ms 0,20,50,100,150 \
   --samples 120 \
   --settle-s 3 \
-  --out docs/connected_load_timing_matrix
+  --out docs/data/connected_load_timing_matrix
 ```
 
 Outputs:
 
-- `docs/connected_load_timing_matrix_quick.json`
-- `docs/connected_load_timing_matrix_quick.rtt.png`
-- `docs/connected_load_timing_matrix_quick.timeout.png`
-- `docs/connected_load_timing_matrix_comprehensive.json`
-- `docs/connected_load_timing_matrix_comprehensive.rtt.png`
-- `docs/connected_load_timing_matrix_comprehensive.timeout.png`
+- `docs/data/connected_load_timing_matrix_quick.json`
+- `docs/data/connected_load_timing_matrix_quick.rtt.png`
+- `docs/data/connected_load_timing_matrix_quick.timeout.png`
+- `docs/data/connected_load_timing_matrix_comprehensive.json`
+- `docs/data/connected_load_timing_matrix_comprehensive.rtt.png`
+- `docs/data/connected_load_timing_matrix_comprehensive.timeout.png`
 - `docs/timing_test_set_summary.md`
-- `docs/timing_capabilities_overview.png`
+- `docs/data/timing_capabilities_overview.png`
 
 Why this is preferred over tiny sample sets:
 

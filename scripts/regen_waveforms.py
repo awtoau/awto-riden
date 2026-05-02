@@ -63,7 +63,7 @@ def _check(path: Path, label: str) -> bool:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--docs-dir", default="docs", metavar="DIR",
+    ap.add_argument("--docs-dir", default="docs/data", metavar="DIR",
                     help="directory containing JSONL files (default: docs)")
     ap.add_argument("--skip-combo", action="store_true",
                     help="skip regenerating the three canonical combo charts")

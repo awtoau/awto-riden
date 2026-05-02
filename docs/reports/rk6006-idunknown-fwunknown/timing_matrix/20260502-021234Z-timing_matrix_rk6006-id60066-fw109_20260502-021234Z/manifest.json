@@ -1,0 +1,20 @@
+{
+  "report_kind": "timing_matrix",
+  "report_title": "Timing Matrix timing_matrix_rk6006-id60066-fw109_20260502-021234Z",
+  "created_utc": "2026-05-02T02:13:24Z",
+  "run_dir": "rk6006-idunknown-fwunknown/timing_matrix/20260502-021234Z-timing_matrix_rk6006-id60066-fw109_20260502-021234Z",
+  "report_path": "rk6006-idunknown-fwunknown/timing_matrix/20260502-021234Z-timing_matrix_rk6006-id60066-fw109_20260502-021234Z/report.md",
+  "device": {
+    "type": "RK6006",
+    "id": "unknown",
+    "fw": "unknown",
+    "sn": "unknown"
+  },
+  "artifacts": [
+    "rk6006-idunknown-fwunknown/timing_matrix/20260502-021234Z-timing_matrix_rk6006-id60066-fw109_20260502-021234Z/report.md",
+    "rk6006-idunknown-fwunknown/timing_matrix/20260502-021234Z-timing_matrix_rk6006-id60066-fw109_20260502-021234Z/timing_matrix.json",
+    "rk6006-idunknown-fwunknown/timing_matrix/20260502-021234Z-timing_matrix_rk6006-id60066-fw109_20260502-021234Z/timing_matrix.rtt.png",
+    "rk6006-idunknown-fwunknown/timing_matrix/20260502-021234Z-timing_matrix_rk6006-id60066-fw109_20260502-021234Z/timing_matrix.timeout.png"
+  ],
+  "source_json": "docs/timing_matrix_rk6006-id60066-fw109_20260502-021234Z.json"
+}

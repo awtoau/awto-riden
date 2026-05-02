@@ -1,0 +1,20 @@
+{
+  "report_kind": "timing_matrix",
+  "report_title": "Timing Matrix connected_load_timing_matrix_quick",
+  "created_utc": "2026-05-02T02:13:24Z",
+  "run_dir": "rk6006-idunknown-fwunknown/timing_matrix/20260502-005723Z-connected_load_timing_matrix_quick",
+  "report_path": "rk6006-idunknown-fwunknown/timing_matrix/20260502-005723Z-connected_load_timing_matrix_quick/report.md",
+  "device": {
+    "type": "RK6006",
+    "id": "unknown",
+    "fw": "unknown",
+    "sn": "unknown"
+  },
+  "artifacts": [
+    "rk6006-idunknown-fwunknown/timing_matrix/20260502-005723Z-connected_load_timing_matrix_quick/report.md",
+    "rk6006-idunknown-fwunknown/timing_matrix/20260502-005723Z-connected_load_timing_matrix_quick/timing_matrix.json",
+    "rk6006-idunknown-fwunknown/timing_matrix/20260502-005723Z-connected_load_timing_matrix_quick/timing_matrix.rtt.png",
+    "rk6006-idunknown-fwunknown/timing_matrix/20260502-005723Z-connected_load_timing_matrix_quick/timing_matrix.timeout.png"
+  ],
+  "source_json": "docs/connected_load_timing_matrix_quick.json"
+}

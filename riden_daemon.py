@@ -242,11 +242,12 @@ class RidenWorker:
     daemon thread and also acquires _lock for each poll.
     """
 
-    def __init__(self, port: str, baud: int, address: int, name: str = "default") -> None:
+    def __init__(self, port: str, baud: int, address: int, name: str = "default", use_raw_serial: bool = False) -> None:
         self.name     = name
         self._port    = port
         self._baud    = baud
         self._address = address
+        self._prefer_raw_serial = use_raw_serial
         self._psu: RidenDevice | None = None
         self._lock    = threading.Lock()
 
@@ -299,8 +300,30 @@ class RidenWorker:
 
     def open(self) -> None:
         with self._lock:
-            transport = SerialTransport(self._port, self._baud, self._address)
-            transport.open()
+            transport = SerialTransport(
+                self._port,
+                self._baud,
+                self._address,
+                use_raw_serial=self._prefer_raw_serial,
+            )
+            try:
+                transport.open()
+            except IOError as first_exc:
+                fallback_raw = not self._prefer_raw_serial
+                fallback = SerialTransport(
+                    self._port,
+                    self._baud,
+                    self._address,
+                    use_raw_serial=fallback_raw,
+                )
+                log.warning(
+                    "open failed with %s transport (%s), retrying with %s",
+                    "raw_serial" if self._prefer_raw_serial else "pymodbus",
+                    first_exc,
+                    "raw_serial" if fallback_raw else "pymodbus",
+                )
+                fallback.open()
+                transport = fallback
             try:
                 self._psu = RidenDevice(transport)
                 self._serial_profile = None

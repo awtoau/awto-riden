@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import statistics
 import sys
 import time
@@ -33,6 +34,7 @@ import matplotlib.pyplot as plt
 # Local import (repo root)
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from riden_daemon import RidenWorker
+from report_pages import normalize_device_slug, update_reports_index, utc_run_stamp, write_manifest
 
 
 def _percentile(sorted_vals: list[float], p: float) -> float:
@@ -189,17 +191,112 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--samples", type=int, default=120, help="Samples per cadence point")
     p.add_argument("--settle-s", type=float, default=3.0, help="Settle time after enabling output")
     p.add_argument("--read-mode", choices=["fast", "full"], default="fast", help="Sampling mode: fast=single FC03 block (regs 10..18), full=worker.status()")
-    p.add_argument("--out", default="docs/connected_load_timing_matrix", help="Output prefix (without extension)")
+    p.add_argument("--use-raw", action="store_true", help="Prefer raw serial transport instead of pymodbus")
+    p.add_argument("--out", default=None, help="Output prefix (without extension). If omitted, uses normalized per-device naming.")
+    p.add_argument("--reports-root", default="docs/reports", help="Root directory for per-device run report pages")
+    p.add_argument("--no-report-pages", action="store_true", help="Disable writing per-run report page and global index")
     return p.parse_args()
+
+
+def _get_device_meta(worker: RidenWorker) -> dict:
+    with worker._lock:
+        psu = worker._assert_connected()
+        return worker._device_info(psu)
+
+
+def _write_timing_report(
+    *,
+    reports_root: Path,
+    run_stamp: str,
+    out_prefix: Path,
+    device_meta: dict,
+    args: argparse.Namespace,
+    report: dict,
+) -> Path:
+    device_slug = normalize_device_slug(device_meta)
+    run_dir = reports_root / device_slug / "timing_matrix" / run_stamp
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    src_json = out_prefix.with_suffix(".json")
+    src_rtt = out_prefix.with_suffix(".rtt.png")
+    src_timeout = out_prefix.with_suffix(".timeout.png")
+
+    dst_json = run_dir / "timing_matrix.json"
+    dst_rtt = run_dir / "timing_matrix.rtt.png"
+    dst_timeout = run_dir / "timing_matrix.timeout.png"
+    shutil.copy2(src_json, dst_json)
+    shutil.copy2(src_rtt, dst_rtt)
+    shutil.copy2(src_timeout, dst_timeout)
+
+    report_path = run_dir / "report.md"
+    lines: list[str] = []
+    lines.append("# Connected Load Timing Matrix Report")
+    lines.append("")
+    lines.append(f"Run: {run_stamp}")
+    lines.append("")
+    lines.append("## Device")
+    lines.append("")
+    lines.append("| Field | Value |")
+    lines.append("|---|---|")
+    lines.append(f"| Model | {device_meta.get('type', device_meta.get('model'))} |")
+    lines.append(f"| Device ID | {device_meta.get('id')} |")
+    lines.append(f"| Firmware | {device_meta.get('fw', device_meta.get('firmware'))} |")
+    lines.append(f"| Port | {device_meta.get('port')} |")
+    lines.append(f"| Baud | {device_meta.get('baud')} |")
+    lines.append(f"| Address | {device_meta.get('address')} |")
+    lines.append("")
+    lines.append("## Test Parameters")
+    lines.append("")
+    lines.append("| Field | Value |")
+    lines.append("|---|---|")
+    lines.append(f"| voltage | {args.voltage} |")
+    lines.append(f"| current | {args.current} |")
+    lines.append(f"| poll_ms | {args.poll_ms} |")
+    lines.append(f"| samples | {args.samples} |")
+    lines.append(f"| settle_s | {args.settle_s} |")
+    lines.append(f"| read_mode | {args.read_mode} |")
+    lines.append("")
+    lines.append("## Summary")
+    lines.append("")
+    lines.append(f"- Captured points: {len(report.get('results', []))}")
+    lines.append("")
+    lines.append("## Artifacts")
+    lines.append("")
+    lines.append(f"- [timing_matrix.json]({dst_json.name})")
+    lines.append(f"- [timing_matrix.rtt.png]({dst_rtt.name})")
+    lines.append(f"- [timing_matrix.timeout.png]({dst_timeout.name})")
+    lines.append("")
+    lines.append("![RTT chart](timing_matrix.rtt.png)")
+    lines.append("")
+    lines.append("![Timeout chart](timing_matrix.timeout.png)")
+    report_path.write_text("\n".join(lines) + "\n")
+
+    write_manifest(
+        run_dir=run_dir,
+        reports_root=reports_root,
+        report_kind="timing_matrix",
+        report_title=f"Timing Matrix {device_meta.get('type', 'unknown')} {run_stamp}",
+        device_meta=device_meta,
+        report_path=report_path,
+        artifacts=[report_path, dst_json, dst_rtt, dst_timeout],
+        extra={
+            "script": "scripts/connected_load_timing_matrix.py",
+            "device_slug": device_slug,
+            "source_output_prefix": str(out_prefix),
+        },
+    )
+    index_path = update_reports_index(reports_root)
+    print(f"WROTE {report_path}")
+    print(f"WROTE {index_path}")
+    return report_path
 
 
 def main() -> int:
     args = parse_args()
     poll_points = [int(x.strip()) for x in args.poll_ms.split(",") if x.strip()]
-    out_prefix = Path(args.out)
-    out_prefix.parent.mkdir(parents=True, exist_ok=True)
+    run_stamp = utc_run_stamp()
 
-    worker = RidenWorker(port=args.port, baud=args.baud, address=args.address)
+    worker = RidenWorker(port=args.port, baud=args.baud, address=args.address, use_raw_serial=args.use_raw)
     started = time.time()
 
     report = {
@@ -220,8 +317,20 @@ def main() -> int:
     }
 
     interrupted = False
+    out_prefix: Path | None = None
+    device_meta: dict = {}
     try:
         worker.open()
+        device_meta = _get_device_meta(worker)
+        if args.out:
+            out_prefix = Path(args.out)
+        else:
+            device_slug = normalize_device_slug(device_meta)
+            out_prefix = Path("docs/data") / f"timing_matrix_{device_slug}_{run_stamp}"
+        out_prefix.parent.mkdir(parents=True, exist_ok=True)
+        report["device"] = device_meta
+        report["run_stamp"] = run_stamp
+        report["normalized_output_prefix"] = str(out_prefix)
 
         # Set deterministic operating point for the load under test.
         worker.set_output(False)
@@ -251,6 +360,15 @@ def main() -> int:
         print(f"WROTE {json_path}")
         print(f"WROTE {out_prefix.with_suffix('.rtt.png')}")
         print(f"WROTE {out_prefix.with_suffix('.timeout.png')}")
+        if not args.no_report_pages:
+            _write_timing_report(
+                reports_root=Path(args.reports_root),
+                run_stamp=run_stamp,
+                out_prefix=out_prefix,
+                device_meta=device_meta,
+                args=args,
+                report=report,
+            )
         if interrupted:
             print("INTERRUPTED: partial report written")
             return 130

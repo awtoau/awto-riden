@@ -4,10 +4,9 @@
 One-command regeneration for connected-load timing test suites.
 
 What this does:
-- Runs a quick suite (fast sanity run)
-- Runs a comprehensive suite (higher confidence)
+- Runs a comprehensive timing suite across poll cadences
 - Includes fastest mode via poll cadence 0 ms (no intentional sleep)
-- Produces a combined markdown summary and a capabilities overview graph
+- Produces a markdown summary and a capabilities overview graph
 
 Example:
   source .venv/bin/activate
@@ -118,13 +117,10 @@ def _write_summary(path: Path, quick_data: dict | None, comp_data: dict | None) 
     lines.append(f"Generated: {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())}")
     lines.append("")
 
-    def add_section(title: str, data: dict | None) -> None:
-        lines.append(f"## {title}")
-        lines.append("")
-        if not data:
-            lines.append("Not run.")
-            lines.append("")
-            return
+    data = comp_data
+    if not data:
+        lines.append("No data.")
+    else:
         rows = _build_metrics(data)
         rec = _recommend(rows)
         lines.append("| poll_ms | ok | err | timeout_% | p50_ms | p95_ms | jitter_ms |")
@@ -137,33 +133,25 @@ def _write_summary(path: Path, quick_data: dict | None, comp_data: dict | None) 
             )
         lines.append("")
         if rec is not None:
-            lines.append(f"Recommended poll cadence from this suite: **{rec} ms**")
+            lines.append(f"Recommended poll cadence: **{rec} ms**")
             lines.append("")
-
-    add_section("Quick Suite", quick_data)
-    add_section("Comprehensive Suite", comp_data)
 
     path.write_text("\n".join(lines) + "\n")
 
 
 def _plot_overview(out_png: Path, quick_data: dict | None, comp_data: dict | None) -> None:
+    data = comp_data
+    if not data:
+        return
+
+    rows = sorted(_build_metrics(data), key=lambda x: x["poll_ms"])
+    x = [r["poll_ms"] for r in rows]
+
     plt.figure(figsize=(11, 6.5))
 
     ax1 = plt.subplot(2, 1, 1)
-
-    def plot_suite(data: dict | None, label: str, marker: str) -> None:
-        if not data:
-            return
-        rows = sorted(_build_metrics(data), key=lambda x: x["poll_ms"])
-        x = [r["poll_ms"] for r in rows]
-        y50 = [r["p50_ms"] for r in rows]
-        y95 = [r["p95_ms"] for r in rows]
-        ax1.plot(x, y50, marker + "-", label=f"{label} p50")
-        ax1.plot(x, y95, marker + "--", label=f"{label} p95")
-
-    plot_suite(quick_data, "Quick", "o")
-    plot_suite(comp_data, "Comprehensive", "s")
-
+    ax1.plot(x, [r["p50_ms"] for r in rows], "s-", label="p50")
+    ax1.plot(x, [r["p95_ms"] for r in rows], "s--", label="p95")
     ax1.set_title("Connected-load timing capabilities")
     ax1.set_xlabel("Requested poll cadence (ms), 0 ms = fastest/no cadence")
     ax1.set_ylabel("Measured RTT (ms)")
@@ -171,22 +159,10 @@ def _plot_overview(out_png: Path, quick_data: dict | None, comp_data: dict | Non
     ax1.legend()
 
     ax2 = plt.subplot(2, 1, 2)
-
-    def bar_suite(data: dict | None, label: str, x_shift: float) -> None:
-        if not data:
-            return
-        rows = sorted(_build_metrics(data), key=lambda x: x["poll_ms"])
-        x = [r["poll_ms"] + x_shift for r in rows]
-        y = [r["timeout_rate_pct"] for r in rows]
-        ax2.bar(x, y, width=8.0, label=label, alpha=0.75)
-
-    bar_suite(quick_data, "Quick timeout %", -4.0)
-    bar_suite(comp_data, "Comprehensive timeout %", 4.0)
-
+    ax2.bar(x, [r["timeout_rate_pct"] for r in rows], width=8.0, alpha=0.75)
     ax2.set_xlabel("Requested poll cadence (ms)")
     ax2.set_ylabel("Timeout/error rate (%)")
     ax2.grid(True, axis="y", alpha=0.3)
-    ax2.legend()
 
     plt.tight_layout()
     out_png.parent.mkdir(parents=True, exist_ok=True)
@@ -201,7 +177,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--address", type=int, default=1)
     p.add_argument("--voltage", type=float, default=12.0)
     p.add_argument("--current", type=float, default=1.5)
-    p.add_argument("--mode", choices=["quick", "comprehensive", "both"], default="both")
+    p.add_argument("--mode", choices=["quick", "comprehensive", "both"], default="comprehensive")
 
     p.add_argument("--quick-poll-ms", default="0,100,150")
     p.add_argument("--quick-samples", type=int, default=12)
@@ -210,11 +186,13 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--comprehensive-samples", type=int, default=120)
 
     p.add_argument("--settle-s", type=float, default=2.0)
-    p.add_argument("--out-dir", default="docs")
+    p.add_argument("--out-dir", default="docs/data")
     p.add_argument("--prefix-quick", default="connected_load_timing_matrix_quick")
     p.add_argument("--prefix-comprehensive", default="connected_load_timing_matrix_comprehensive")
-    p.add_argument("--summary", default="timing_test_set_summary.md")
-    p.add_argument("--overview-png", default="timing_capabilities_overview.png")
+    p.add_argument("--summary", default="docs/timing_test_set_summary.md",
+                        help="Path for the markdown summary (default: docs/timing_test_set_summary.md)")
+    p.add_argument("--overview-png", default=None,
+                        help="Path for overview PNG (default: <out-dir>/timing_capabilities_overview.png)")
     p.add_argument("--analyze-only", action="store_true", help="Skip hardware runs and only regenerate summary/overview from existing JSON files")
     return p.parse_args()
 
@@ -272,8 +250,8 @@ def main() -> int:
                 return rc
             comp_data = _read_json(comp_prefix.with_suffix(".json"))
 
-    summary_path = out_dir / args.summary
-    overview_path = out_dir / args.overview_png
+    summary_path = Path(args.summary)
+    overview_path = Path(args.overview_png) if args.overview_png else out_dir / "timing_capabilities_overview.png"
     _write_summary(summary_path, quick_data=quick_data, comp_data=comp_data)
     _plot_overview(overview_path, quick_data=quick_data, comp_data=comp_data)
 
