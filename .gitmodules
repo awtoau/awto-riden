@@ -1,0 +1,3 @@
+[submodule "vendor/awto-mcp-serial"]
+	path = vendor/awto-mcp-serial
+	url = https://github.com/awto-au/awto-mcp-serial.git

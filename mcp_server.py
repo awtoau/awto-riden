@@ -42,6 +42,7 @@ from typing import Any
 
 import colorlog
 from mcp.server.fastmcp import FastMCP
+from riden_transport import find_riden_port, list_serial_ports
 
 from protocol import ERR_INTERNAL, ERR_INVALID_ARG, ERR_IO, ERR_NOT_CONNECTED, ERR_TIMEOUT
 from riden_daemon import RidenWorker
@@ -1040,8 +1041,26 @@ Examples:
     elif args.port:
         psu_specs.append((args.name, args.port, args.baud, args.address))
     else:
-        # Default fallback
-        psu_specs.append(("default", "/dev/ttyUSB0", 115200, 1))
+        # Default fallback: score available ports for Riden PSU likelihood
+        # (CH340/341/343 VID/PID > any ttyUSB > ttyACM).
+        default_port, default_baud = find_riden_port(fallback="/dev/ttyUSB0")
+        all_ports = list_serial_ports()
+        if all_ports:
+            log.info(
+                "awto.mcp: auto-selected PSU port %s @ %d baud"
+                " (available: %s)",
+                default_port, default_baud,
+                ", ".join(
+                    f"{p['device']}({p['chip'] or 'unknown'})" for p in all_ports
+                ),
+            )
+        else:
+            log.warning(
+                "awto.mcp: no serial devices found; using fallback %s",
+                default_port,
+            )
+
+        psu_specs.append(("default", default_port, default_baud, 1))
 
     _default_psu = psu_specs[0][0]
 

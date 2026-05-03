@@ -18,10 +18,88 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+import sys
 import struct
 import time
 
 from serial import Serial
+from serial.tools import list_ports
+
+# Add vendor/awto-mcp-serial to the path so we can import its protocol module.
+import os as _os
+_vendor = _os.path.join(_os.path.dirname(__file__), "vendor", "awto-mcp-serial")
+if _vendor not in sys.path:
+    sys.path.insert(0, _vendor)
+from protocol import KNOWN_DEVICES  # noqa: E402
+
+
+# ---------------------------------------------------------------------------
+# Serial port auto-detection for Riden PSUs
+# ---------------------------------------------------------------------------
+
+# CH340/341/343 VID used by QinHeng — the chipset in Riden PSUs.
+_RIDEN_VID = 0x1A86
+
+def find_riden_port(fallback: str = "/dev/ttyUSB0") -> tuple[str, int]:
+    """Return (device_path, baud) for the most likely Riden PSU serial port.
+
+    Scoring (highest wins):
+      3 — VID matches QinHeng (0x1A86) AND PID in KNOWN_DEVICES with Riden note
+      2 — VID matches QinHeng (0x1A86) — any CH340/341/343 chip
+      1 — device path is ttyUSB* (generic USB-serial fallback)
+      0 — ttyACM* or other
+
+    Returns the fallback path at baud 115200 if no ports are found.
+    """
+    best_device = fallback
+    best_baud   = 115_200
+    best_score  = -1
+
+    for port in list_ports.comports():
+        vid = port.vid
+        pid = port.pid
+        score = 0
+
+        if vid == _RIDEN_VID:
+            info = KNOWN_DEVICES.get((vid, pid))
+            if info and "Riden" in info.get("notes", ""):
+                score = 3
+                baud = info["typical_baud"]
+            else:
+                score = 2
+                info2 = KNOWN_DEVICES.get((vid, pid))
+                baud = info2["typical_baud"] if info2 else 115_200
+        elif "ttyUSB" in port.device:
+            score = 1
+            baud = 115_200
+        else:
+            baud = 115_200
+
+        if score > best_score:
+            best_score  = score
+            best_device = port.device
+            best_baud   = baud
+
+    return best_device, best_baud
+
+
+def list_serial_ports() -> list[dict]:
+    """Return info dicts for all detected serial ports, with Riden scoring."""
+    results = []
+    for port in sorted(list_ports.comports(), key=lambda p: p.device):
+        vid = port.vid
+        pid = port.pid
+        info = KNOWN_DEVICES.get((vid, pid)) if vid and pid else None
+        results.append({
+            "device":      port.device,
+            "description": port.description,
+            "vid":         f"0x{vid:04X}" if vid else None,
+            "pid":         f"0x{pid:04X}" if pid else None,
+            "chip":        info["chip"] if info else None,
+            "typical_baud": info["typical_baud"] if info else None,
+            "notes":       info["notes"] if info else None,
+        })
+    return results
 
 
 # ---------------------------------------------------------------------------
