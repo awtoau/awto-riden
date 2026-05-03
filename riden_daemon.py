@@ -1443,6 +1443,129 @@ class RidenWorker:
             "unknown_nonzero_count": len(unknowns),
         }
 
+    def diff_scan(
+        self,
+        start: int = 0,
+        end: int = 300,
+        batch: int = 50,
+        output_on: bool = True,
+        settle_ms: int = 500,
+    ) -> dict[str, Any]:
+        """Differential register scan: compare registers with output OFF vs ON (or vice-versa).
+
+        Scans [start, end) twice — once with output in state A (opposite of *output_on*),
+        once with output in state *output_on* — and returns only the registers that changed.
+        Useful for identifying state-dependent registers (CV/CC mode, output voltage/current,
+        protection flags, etc.) and undocumented shadow/mirror registers.
+
+        The output is restored to its original state after the scan.
+
+        Args:
+            start:      First register address (default 0).
+            end:        One past the last address (default 300).
+            batch:      Registers per Modbus read request (default 50).
+            output_on:  The *second* scan state.  True → scan A=off, scan B=on.
+                        False → scan A=on, scan B=off (default True).
+            settle_ms:  Milliseconds to wait after toggling output before scanning
+                        (default 500).
+        """
+        import time as _time
+        from riden_register import Register as _Reg
+
+        _known: dict[int, str] = {
+            v: k for k, v in vars(_Reg).items()
+            if not k.startswith("_") and isinstance(v, int)
+        }
+
+        if start < 0 or end > 0xFFFF or start >= end:
+            raise ValueError("start/end out of range")
+        batch = max(1, min(125, batch))
+
+        def _read_range() -> dict[int, int]:
+            values: dict[int, int] = {}
+            addr = start
+            while addr < end:
+                chunk = min(batch, end - addr)
+                try:
+                    with self._lock:
+                        psu = self._assert_connected()
+                        raw = psu.read(addr, chunk)
+                    if chunk == 1:
+                        raw = (raw,) if not isinstance(raw, (list, tuple)) else raw
+                    for i, val in enumerate(raw):
+                        values[addr + i] = int(val)
+                except Exception:
+                    pass
+                addr += chunk
+                _time.sleep(0.05)
+            return values
+
+        # Save original output state
+        with self._lock:
+            psu = self._assert_connected()
+            psu.update()
+            original_output = self._output_on(psu)
+
+        state_a = not output_on
+        state_b = output_on
+
+        try:
+            # Set state A
+            with self._lock:
+                psu = self._assert_connected()
+                self._set_output(psu, state_a)
+            _time.sleep(settle_ms / 1000.0)
+            scan_a = _read_range()
+
+            # Set state B
+            with self._lock:
+                psu = self._assert_connected()
+                self._set_output(psu, state_b)
+            _time.sleep(settle_ms / 1000.0)
+            scan_b = _read_range()
+
+        finally:
+            # Restore original output state
+            with self._lock:
+                try:
+                    psu = self._assert_connected()
+                    self._set_output(psu, original_output)
+                except Exception:
+                    pass
+
+        # Compute diff
+        changed = []
+        for addr in sorted(set(scan_a) | set(scan_b)):
+            val_a = scan_a.get(addr)
+            val_b = scan_b.get(addr)
+            if val_a != val_b:
+                changed.append({
+                    "addr": addr,
+                    "name": _known.get(addr, "unknown"),
+                    "known": addr in _known,
+                    "value_a": val_a,
+                    "hex_a": f"0x{val_a:04X}" if val_a is not None else None,
+                    "value_b": val_b,
+                    "hex_b": f"0x{val_b:04X}" if val_b is not None else None,
+                    "delta": (val_b - val_a) if (val_a is not None and val_b is not None) else None,
+                })
+
+        changed_unknown = [r for r in changed if not r["known"]]
+
+        return {
+            "start": start,
+            "end": end,
+            "batch": batch,
+            "state_a": "output_off" if state_a is False else "output_on",
+            "state_b": "output_off" if state_b is False else "output_on",
+            "settle_ms": settle_ms,
+            "registers_scanned": end - start,
+            "changed_count": len(changed),
+            "changed_unknown_count": len(changed_unknown),
+            "changed": changed,
+            "changed_unknown": changed_unknown,
+        }
+
     def capabilities(self) -> dict[str, Any]:
         with self._lock:
             psu = self._assert_connected()
@@ -1467,6 +1590,7 @@ class RidenWorker:
                 "modbus_read_holding",
                 "modbus_write_register",
                 "register_scan",
+                "diff_scan",
                 "profile_serial",
                 "info",
             ],

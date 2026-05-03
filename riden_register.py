@@ -7,6 +7,14 @@
 # The register map was originally documented by Baldanos/rd6006 (Apache-2.0):
 # https://github.com/Baldanos/rd6006/blob/master/registers.md
 #
+# Additional sources:
+#   rssdev10/riden-flashtool (MIT) — reg 54 CAL_COMMIT magic, REBOOT_MAGIC:
+#   https://github.com/rssdev10/riden-flashtool
+#
+#   Live register scan (RD6024 fw109, 2026-05-03) — empirical observations
+#   for clusters 182-195 and 208-239:
+#   docs/data/register_scan_20260503-011913Z.json
+#
 # No functional changes from upstream. Attribution: see ATTRIBUTION.md.
 
 
@@ -54,17 +62,24 @@ class Register:
     HOUR = 51
     MINUTE = 52
     SECOND = 53
-    # Unused/Unknown 54
+    # Commit calibration registers to NVRAM.
+    # Write CAL_COMMIT_MAGIC (0x1501 = 5377) to persist calibration.
+    # Source: Baldanos/rd6006 registers.md; rssdev10/riden-flashtool common.rs
+    CAL_COMMIT = 54
+    CAL_COMMIT_MAGIC = 0x1501  # 5377 — write to reg 54 to commit calibration
     # Calibration
     # DO NOT CHANGE Unless you know what you're doing!
-    V_OUT_ZERO = 55
-    V_OUT_SCALE = 56
-    V_BACK_ZERO = 57
-    V_BACK_SCALE = 58
-    I_OUT_ZERO = 59
-    I_OUT_SCALE = 60
-    I_BACK_ZERO = 61
-    I_BACK_SCALE = 62
+    # Register naming: rssdev10/riden-flashtool uses "Target" for the DAC-side
+    # calibration and "Display" for the ADC/readback side. ShayBox names them
+    # V_OUT/V_BACK and I_OUT/I_BACK respectively.
+    V_OUT_ZERO = 55   # Target V Offset  (DAC zero trim)
+    V_OUT_SCALE = 56  # Target V Scale   (DAC scale)
+    V_BACK_ZERO = 57  # Display V Offset (ADC zero trim)
+    V_BACK_SCALE = 58 # Display V Scale  (ADC scale)
+    I_OUT_ZERO = 59   # Target I Offset  (DAC zero trim)
+    I_OUT_SCALE = 60  # Target I Scale   (DAC scale)
+    I_BACK_ZERO = 61  # Display I Offset (ADC zero trim)
+    I_BACK_SCALE = 62 # Display I Scale  (ADC scale)
     # Unused/Unknown 63-65
     # Settings/Options
     OPT_TAKE_OK = 66
@@ -116,7 +131,52 @@ class Register:
     M9_I = 117
     M9_OVP = 118
     M9_OCP = 119
-    # Unused/Unknown 120-255
+    # Unused/Unknown 120-181
+    # Empirical cluster A (RD6024 fw109, scan 2026-05-03): 182-195
+    # Appears to be firmware metadata / calibration mirror bank.
+    # reg 182 = firmware revision copy; regs 186-192 mirror calibration constants.
+    # Source: docs/data/register_scan_20260503-011913Z.json
+    # Unused/Unknown 196-207
+    # Extended preset bank M10..M17 — empirically confirmed (RD6024 fw1.39, scan 2026-05-03).
+    # Repeating 4-register pattern (V / I / OVP / OCP), same layout as M0..M9 at 80..119.
+    # Not documented in Baldanos/rd6006 or ShayBox/Riden; discovered via live register scan.
+    # Source: docs/data/register_scan_20260503-011913Z.json + riden-flashtool dump-regs
+    M10_V = 208
+    M10_I = 209
+    M10_OVP = 210
+    M10_OCP = 211
+    M11_V = 212
+    M11_I = 213
+    M11_OVP = 214
+    M11_OCP = 215
+    M12_V = 216
+    M12_I = 217
+    M12_OVP = 218
+    M12_OCP = 219
+    M13_V = 220
+    M13_I = 221
+    M13_OVP = 222
+    M13_OCP = 223
+    M14_V = 224
+    M14_I = 225
+    M14_OVP = 226
+    M14_OCP = 227
+    M15_V = 228
+    M15_I = 229
+    M15_OVP = 230
+    M15_OCP = 231
+    M16_V = 232
+    M16_I = 233
+    M16_OVP = 234
+    M16_OCP = 235
+    M17_V = 236
+    M17_I = 237
+    M17_OVP = 238
+    M17_OCP = 239
+    # Unused/Unknown 240-255
+    # System control — enter bootloader by writing REBOOT_MAGIC.
+    # Source: rssdev10/riden-flashtool common.rs (REBOOT_REGISTER / REBOOT_MAGIC)
     SYSTEM = 256
+    REBOOT_MAGIC = 0x1601  # 5633 — write to SYSTEM to enter bootloader
     # NOT REGISTERS — magic numbers used with SYSTEM register
     BOOTLOADER = 5633

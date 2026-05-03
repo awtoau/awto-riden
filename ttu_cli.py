@@ -7,6 +7,7 @@ One-shot Riden RD60xx commands for human use at the bench.
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import json
 import logging
 import logging.handlers
@@ -21,6 +22,52 @@ from protocol import ERR_INTERNAL, ERR_INVALID_ARG, ERR_IO, ERR_NOT_CONNECTED, E
 from riden_daemon import RidenWorker
 
 log = logging.getLogger("awto.cli")
+
+
+def _build_register_scan_report(scan: dict[str, Any]) -> dict[str, Any]:
+    """Build a concise report focused on undocumented register hits."""
+    unknown = sorted(scan.get("unknown_nonzero", []), key=lambda r: int(r.get("addr", 0)))
+
+    value_counts = Counter(int(r.get("value", 0)) for r in unknown)
+    unique_values = [
+        {
+            "value": val,
+            "hex": f"0x{val:04X}",
+            "count": count,
+        }
+        for val, count in sorted(value_counts.items(), key=lambda kv: (-kv[1], kv[0]))
+    ]
+
+    ranges: list[dict[str, int]] = []
+    if unknown:
+        start = prev = int(unknown[0]["addr"])
+        for row in unknown[1:]:
+            addr = int(row["addr"])
+            if addr == prev + 1:
+                prev = addr
+            else:
+                ranges.append({"start": start, "end": prev})
+                start = prev = addr
+        ranges.append({"start": start, "end": prev})
+
+    return {
+        "scan_window": {
+            "start": scan.get("start"),
+            "end": scan.get("end"),
+            "batch": scan.get("batch"),
+        },
+        "unknown_nonzero_count": len(unknown),
+        "unknown_ranges": ranges,
+        "unique_unknown_values": unique_values,
+        "unknown_registers": [
+            {
+                "addr": int(r["addr"]),
+                "value": int(r["value"]),
+                "hex": r["hex"],
+            }
+            for r in unknown
+        ],
+    }
 
 
 def _error_code(exc: Exception) -> str:
@@ -194,6 +241,43 @@ def main() -> None:
         metavar="PATH",
         help="optional path to write scan JSON",
     )
+    sp_scan.add_argument(
+        "--report",
+        action="store_true",
+        help="print concise report of undocumented/non-known registers",
+    )
+    sp_scan.add_argument(
+        "--report-only",
+        action="store_true",
+        help="only output concise report (omit full raw scan payload)",
+    )
+
+    sp_diff = sub.add_parser(
+        "diff-scan",
+        help="differential scan: compare registers with output off vs on",
+        formatter_class=_F,
+    )
+    sp_diff.add_argument("--start", type=int, default=0, metavar="ADDR", help="first register (default: 0)")
+    sp_diff.add_argument("--end", type=int, default=300, metavar="ADDR", help="one-past-last register (default: 300)")
+    sp_diff.add_argument("--batch", type=int, default=50, metavar="N", help="registers per read request (default: 50)")
+    sp_diff.add_argument(
+        "--output-off-first",
+        action="store_true",
+        help="scan A=on then B=off (default: scan A=off then B=on)",
+    )
+    sp_diff.add_argument("--settle-ms", type=int, default=500, metavar="MS", help="ms to wait after toggling output (default: 500)")
+    sp_diff.add_argument(
+        "--unknown-only",
+        action="store_true",
+        help="only show registers that are undocumented in the known map",
+    )
+    sp_diff.add_argument(
+        "--save-json",
+        type=Path,
+        default=None,
+        metavar="PATH",
+        help="optional path to write diff JSON",
+    )
 
     sp_plot = sub.add_parser(
         "plot",
@@ -292,6 +376,25 @@ def main() -> None:
                 args.save_json.parent.mkdir(parents=True, exist_ok=True)
                 args.save_json.write_text(json.dumps(result, indent=2), encoding="utf-8")
                 result["saved"] = str(args.save_json)
+            if args.report or args.report_only:
+                report = _build_register_scan_report(result)
+                result = report if args.report_only else {"scan": result, "report": report}
+        elif c == "diff-scan":
+            result = worker.diff_scan(
+                start=args.start,
+                end=args.end,
+                batch=args.batch,
+                output_on=not args.output_off_first,
+                settle_ms=args.settle_ms,
+            )
+            if args.save_json is not None:
+                args.save_json.parent.mkdir(parents=True, exist_ok=True)
+                args.save_json.write_text(json.dumps(result, indent=2), encoding="utf-8")
+                result["saved"] = str(args.save_json)
+            if args.unknown_only:
+                result = {k: v for k, v in result.items() if k != "changed"}
+                result["changed"] = result.pop("changed_unknown")
+                result["changed_count"] = result.pop("changed_unknown_count")
 
         print(json.dumps(result, indent=2))
     except Exception as e:

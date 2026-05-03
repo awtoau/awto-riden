@@ -988,6 +988,39 @@ def rd_register_scan(
 
 
 @mcp.tool()
+def rd_diff_scan(
+    start: int = 0,
+    end: int = 300,
+    batch: int = 50,
+    output_on: bool = True,
+    settle_ms: int = 500,
+    psu: str = "default",
+) -> dict[str, Any]:
+    """Differential register scan: compare registers with output OFF vs ON.
+
+    Scans [start, end) twice — once with output off, once with output on
+    (or reversed when output_on=False) — and returns only registers that changed.
+    Useful for identifying undocumented shadow/mirror registers and confirming
+    which registers track live output state (voltage, current, protection flags).
+
+    The output is restored to its original state after the scan completes.
+
+    Args:
+        start:      First register address (default 0).
+        end:        One past the last address to scan (default 300).
+        batch:      Registers per read request, 1–125 (default 50).
+        output_on:  Second scan state: True → scan A=off then B=on (default).
+                    False → scan A=on then B=off.
+        settle_ms:  Wait time (ms) after toggling output before scanning (default 500).
+        psu:        PSU name (default: the default PSU).
+    """
+    try:
+        return _ensure_connected(psu).diff_scan(start, end, batch, output_on, settle_ms)
+    except Exception as e:
+        _raise_tool_error("diff_scan", e)
+
+
+@mcp.tool()
 def rd_daemon_info(psu: str = "default") -> dict[str, Any]:
     """Get process health: PID, memory, CPU, threads, etc.
 

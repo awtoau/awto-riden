@@ -259,3 +259,13 @@ Agent/CLI
 - Disable output before large voltage jumps.
 - Treat CC at turn-on as expected inrush behavior unless persistent.
 - Use `rd_all_off` for emergency multi-PSU shutdown.
+
+## Related projects
+
+| Project | Description |
+|---|---|
+| [Baldanos/rd6006](https://github.com/Baldanos/rd6006) | Original Python driver and authoritative Modbus register map (Apache-2.0) |
+| [ShayBox/Riden](https://github.com/ShayBox/Riden) | Extended Python library covering full RD60xx/RK60xx family (MIT) |
+| [rssdev10/riden-flashtool](https://github.com/rssdev10/riden-flashtool) | Rust CLI: firmware flash, calibration wizard, RTC sync, preset import/export (MIT) |
+| [tjko/riden-flashtool](https://github.com/tjko/riden-flashtool) | Original Python flash tool that rssdev10's port is derived from (MIT) |
+| [simeonmiteff/cal-riden-psu](https://github.com/simeonmiteff/cal-riden-psu) | Calibration scripts for Riden PSUs |
