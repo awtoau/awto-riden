@@ -18,19 +18,65 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-import sys
+import importlib.util
 import struct
 import time
+
+import logging
 
 from serial import Serial
 from serial.tools import list_ports
 
-# Add vendor/awto-mcp-serial to the path so we can import its protocol module.
 import os as _os
-_vendor = _os.path.join(_os.path.dirname(__file__), "vendor", "awto-mcp-serial")
-if _vendor not in sys.path:
-    sys.path.insert(0, _vendor)
-from protocol import KNOWN_DEVICES  # noqa: E402
+
+log = logging.getLogger("riden.transport")
+
+
+def _load_vendor_known_devices() -> dict[tuple[int, int], dict]:
+    """Load KNOWN_DEVICES from vendor/awto-mcp-serial/protocol.py safely.
+
+    Uses an explicit module spec to avoid name collisions with this repo's
+    top-level protocol.py.
+    """
+    _vendor_protocol = _os.path.join(
+        _os.path.dirname(__file__), "vendor", "awto-mcp-serial", "protocol.py",
+    )
+    if not _os.path.exists(_vendor_protocol):
+        log.warning(
+            "vendor protocol not found at %s; continuing with empty KNOWN_DEVICES "
+            "(run 'git submodule update --init --recursive' for full detection)",
+            _vendor_protocol,
+        )
+        return {}
+
+    spec = importlib.util.spec_from_file_location("awto_mcp_serial_protocol", _vendor_protocol)
+    if spec is None or spec.loader is None:
+        log.warning(
+            "failed to load vendor protocol module from %s; continuing with empty KNOWN_DEVICES",
+            _vendor_protocol,
+        )
+        return {}
+
+    try:
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        known = getattr(module, "KNOWN_DEVICES", None)
+        if isinstance(known, dict):
+            return known
+        log.warning(
+            "vendor protocol module at %s has no KNOWN_DEVICES dict; using empty fallback",
+            _vendor_protocol,
+        )
+    except Exception as exc:
+        log.warning(
+            "error loading vendor protocol from %s: %s; continuing with empty KNOWN_DEVICES",
+            _vendor_protocol,
+            exc,
+        )
+    return {}
+
+
+KNOWN_DEVICES = _load_vendor_known_devices()
 
 
 # ---------------------------------------------------------------------------

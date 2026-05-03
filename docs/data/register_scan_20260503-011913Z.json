@@ -1,0 +1,1200 @@
+{
+  "status": {
+    "device_id": 60241,
+    "model": "RD6024",
+    "v_set": 12.0,
+    "i_set": 17.0,
+    "v_out": 11.99,
+    "i_out": 1.7,
+    "protect_raw": 0,
+    "cv_cc_raw": 0,
+    "output_raw": 1
+  },
+  "start": 0,
+  "end": 400,
+  "batch": 125,
+  "total_registers": 400,
+  "zeros_skipped": 277,
+  "errors": [],
+  "registers_nonzero": [
+    {
+      "addr": 0,
+      "name": "ID",
+      "known": true,
+      "value": 60241,
+      "hex": "0xEB51"
+    },
+    {
+      "addr": 2,
+      "name": "SN_L",
+      "known": true,
+      "value": 4826,
+      "hex": "0x12DA"
+    },
+    {
+      "addr": 3,
+      "name": "FW",
+      "known": true,
+      "value": 139,
+      "hex": "0x008B"
+    },
+    {
+      "addr": 5,
+      "name": "INT_C",
+      "known": true,
+      "value": 42,
+      "hex": "0x002A"
+    },
+    {
+      "addr": 7,
+      "name": "INT_F",
+      "known": true,
+      "value": 107,
+      "hex": "0x006B"
+    },
+    {
+      "addr": 8,
+      "name": "V_SET",
+      "known": true,
+      "value": 1200,
+      "hex": "0x04B0"
+    },
+    {
+      "addr": 9,
+      "name": "I_SET",
+      "known": true,
+      "value": 1700,
+      "hex": "0x06A4"
+    },
+    {
+      "addr": 10,
+      "name": "V_OUT",
+      "known": true,
+      "value": 1199,
+      "hex": "0x04AF"
+    },
+    {
+      "addr": 11,
+      "name": "I_OUT",
+      "known": true,
+      "value": 170,
+      "hex": "0x00AA"
+    },
+    {
+      "addr": 13,
+      "name": "P_OUT",
+      "known": true,
+      "value": 2038,
+      "hex": "0x07F6"
+    },
+    {
+      "addr": 14,
+      "name": "V_IN",
+      "known": true,
+      "value": 6763,
+      "hex": "0x1A6B"
+    },
+    {
+      "addr": 15,
+      "name": "KEYPAD",
+      "known": true,
+      "value": 1,
+      "hex": "0x0001"
+    },
+    {
+      "addr": 18,
+      "name": "OUTPUT",
+      "known": true,
+      "value": 1,
+      "hex": "0x0001"
+    },
+    {
+      "addr": 34,
+      "name": "EXT_C_S",
+      "known": true,
+      "value": 1,
+      "hex": "0x0001"
+    },
+    {
+      "addr": 35,
+      "name": "EXT_C",
+      "known": true,
+      "value": 89,
+      "hex": "0x0059"
+    },
+    {
+      "addr": 36,
+      "name": "EXT_F_S",
+      "known": true,
+      "value": 1,
+      "hex": "0x0001"
+    },
+    {
+      "addr": 37,
+      "name": "EXT_F",
+      "known": true,
+      "value": 129,
+      "hex": "0x0081"
+    },
+    {
+      "addr": 39,
+      "name": "AH_L",
+      "known": true,
+      "value": 28430,
+      "hex": "0x6F0E"
+    },
+    {
+      "addr": 40,
+      "name": "WH_H",
+      "known": true,
+      "value": 5,
+      "hex": "0x0005"
+    },
+    {
+      "addr": 41,
+      "name": "WH_L",
+      "known": true,
+      "value": 13206,
+      "hex": "0x3396"
+    },
+    {
+      "addr": 48,
+      "name": "YEAR",
+      "known": true,
+      "value": 2019,
+      "hex": "0x07E3"
+    },
+    {
+      "addr": 49,
+      "name": "MONTH",
+      "known": true,
+      "value": 1,
+      "hex": "0x0001"
+    },
+    {
+      "addr": 50,
+      "name": "DAY",
+      "known": true,
+      "value": 19,
+      "hex": "0x0013"
+    },
+    {
+      "addr": 51,
+      "name": "HOUR",
+      "known": true,
+      "value": 13,
+      "hex": "0x000D"
+    },
+    {
+      "addr": 52,
+      "name": "MINUTE",
+      "known": true,
+      "value": 27,
+      "hex": "0x001B"
+    },
+    {
+      "addr": 53,
+      "name": "SECOND",
+      "known": true,
+      "value": 23,
+      "hex": "0x0017"
+    },
+    {
+      "addr": 55,
+      "name": "V_OUT_ZERO",
+      "known": true,
+      "value": 30,
+      "hex": "0x001E"
+    },
+    {
+      "addr": 56,
+      "name": "V_OUT_SCALE",
+      "known": true,
+      "value": 24747,
+      "hex": "0x60AB"
+    },
+    {
+      "addr": 57,
+      "name": "V_BACK_ZERO",
+      "known": true,
+      "value": 25,
+      "hex": "0x0019"
+    },
+    {
+      "addr": 58,
+      "name": "V_BACK_SCALE",
+      "known": true,
+      "value": 16215,
+      "hex": "0x3F57"
+    },
+    {
+      "addr": 59,
+      "name": "I_OUT_ZERO",
+      "known": true,
+      "value": 361,
+      "hex": "0x0169"
+    },
+    {
+      "addr": 60,
+      "name": "I_OUT_SCALE",
+      "known": true,
+      "value": 6191,
+      "hex": "0x182F"
+    },
+    {
+      "addr": 61,
+      "name": "I_BACK_ZERO",
+      "known": true,
+      "value": 90,
+      "hex": "0x005A"
+    },
+    {
+      "addr": 62,
+      "name": "I_BACK_SCALE",
+      "known": true,
+      "value": 6639,
+      "hex": "0x19EF"
+    },
+    {
+      "addr": 66,
+      "name": "OPT_TAKE_OK",
+      "known": true,
+      "value": 1,
+      "hex": "0x0001"
+    },
+    {
+      "addr": 69,
+      "name": "OPT_BUZZ",
+      "known": true,
+      "value": 1,
+      "hex": "0x0001"
+    },
+    {
+      "addr": 70,
+      "name": "OPT_LOGO",
+      "known": true,
+      "value": 1,
+      "hex": "0x0001"
+    },
+    {
+      "addr": 72,
+      "name": "OPT_LIGHT",
+      "known": true,
+      "value": 4,
+      "hex": "0x0004"
+    },
+    {
+      "addr": 80,
+      "name": "M0_V",
+      "known": true,
+      "value": 1200,
+      "hex": "0x04B0"
+    },
+    {
+      "addr": 81,
+      "name": "M0_I",
+      "known": true,
+      "value": 1700,
+      "hex": "0x06A4"
+    },
+    {
+      "addr": 82,
+      "name": "M0_OVP",
+      "known": true,
+      "value": 6200,
+      "hex": "0x1838"
+    },
+    {
+      "addr": 83,
+      "name": "M0_OCP",
+      "known": true,
+      "value": 2390,
+      "hex": "0x0956"
+    },
+    {
+      "addr": 84,
+      "name": "M1_V",
+      "known": true,
+      "value": 500,
+      "hex": "0x01F4"
+    },
+    {
+      "addr": 85,
+      "name": "M1_I",
+      "known": true,
+      "value": 2410,
+      "hex": "0x096A"
+    },
+    {
+      "addr": 86,
+      "name": "M1_OVP",
+      "known": true,
+      "value": 6200,
+      "hex": "0x1838"
+    },
+    {
+      "addr": 87,
+      "name": "M1_OCP",
+      "known": true,
+      "value": 2420,
+      "hex": "0x0974"
+    },
+    {
+      "addr": 88,
+      "name": "M2_V",
+      "known": true,
+      "value": 500,
+      "hex": "0x01F4"
+    },
+    {
+      "addr": 89,
+      "name": "M2_I",
+      "known": true,
+      "value": 2410,
+      "hex": "0x096A"
+    },
+    {
+      "addr": 90,
+      "name": "M2_OVP",
+      "known": true,
+      "value": 6200,
+      "hex": "0x1838"
+    },
+    {
+      "addr": 91,
+      "name": "M2_OCP",
+      "known": true,
+      "value": 2420,
+      "hex": "0x0974"
+    },
+    {
+      "addr": 92,
+      "name": "M3_V",
+      "known": true,
+      "value": 500,
+      "hex": "0x01F4"
+    },
+    {
+      "addr": 93,
+      "name": "M3_I",
+      "known": true,
+      "value": 2410,
+      "hex": "0x096A"
+    },
+    {
+      "addr": 94,
+      "name": "M3_OVP",
+      "known": true,
+      "value": 6200,
+      "hex": "0x1838"
+    },
+    {
+      "addr": 95,
+      "name": "M3_OCP",
+      "known": true,
+      "value": 2420,
+      "hex": "0x0974"
+    },
+    {
+      "addr": 96,
+      "name": "M4_V",
+      "known": true,
+      "value": 500,
+      "hex": "0x01F4"
+    },
+    {
+      "addr": 97,
+      "name": "M4_I",
+      "known": true,
+      "value": 2410,
+      "hex": "0x096A"
+    },
+    {
+      "addr": 98,
+      "name": "M4_OVP",
+      "known": true,
+      "value": 6200,
+      "hex": "0x1838"
+    },
+    {
+      "addr": 99,
+      "name": "M4_OCP",
+      "known": true,
+      "value": 2420,
+      "hex": "0x0974"
+    },
+    {
+      "addr": 100,
+      "name": "M5_V",
+      "known": true,
+      "value": 500,
+      "hex": "0x01F4"
+    },
+    {
+      "addr": 101,
+      "name": "M5_I",
+      "known": true,
+      "value": 2410,
+      "hex": "0x096A"
+    },
+    {
+      "addr": 102,
+      "name": "M5_OVP",
+      "known": true,
+      "value": 6200,
+      "hex": "0x1838"
+    },
+    {
+      "addr": 103,
+      "name": "M5_OCP",
+      "known": true,
+      "value": 2420,
+      "hex": "0x0974"
+    },
+    {
+      "addr": 104,
+      "name": "M6_V",
+      "known": true,
+      "value": 500,
+      "hex": "0x01F4"
+    },
+    {
+      "addr": 105,
+      "name": "M6_I",
+      "known": true,
+      "value": 2410,
+      "hex": "0x096A"
+    },
+    {
+      "addr": 106,
+      "name": "M6_OVP",
+      "known": true,
+      "value": 6200,
+      "hex": "0x1838"
+    },
+    {
+      "addr": 107,
+      "name": "M6_OCP",
+      "known": true,
+      "value": 2420,
+      "hex": "0x0974"
+    },
+    {
+      "addr": 108,
+      "name": "M7_V",
+      "known": true,
+      "value": 500,
+      "hex": "0x01F4"
+    },
+    {
+      "addr": 109,
+      "name": "M7_I",
+      "known": true,
+      "value": 2410,
+      "hex": "0x096A"
+    },
+    {
+      "addr": 110,
+      "name": "M7_OVP",
+      "known": true,
+      "value": 6200,
+      "hex": "0x1838"
+    },
+    {
+      "addr": 111,
+      "name": "M7_OCP",
+      "known": true,
+      "value": 2420,
+      "hex": "0x0974"
+    },
+    {
+      "addr": 112,
+      "name": "M8_V",
+      "known": true,
+      "value": 500,
+      "hex": "0x01F4"
+    },
+    {
+      "addr": 113,
+      "name": "M8_I",
+      "known": true,
+      "value": 2410,
+      "hex": "0x096A"
+    },
+    {
+      "addr": 114,
+      "name": "M8_OVP",
+      "known": true,
+      "value": 6200,
+      "hex": "0x1838"
+    },
+    {
+      "addr": 115,
+      "name": "M8_OCP",
+      "known": true,
+      "value": 2420,
+      "hex": "0x0974"
+    },
+    {
+      "addr": 116,
+      "name": "M9_V",
+      "known": true,
+      "value": 500,
+      "hex": "0x01F4"
+    },
+    {
+      "addr": 117,
+      "name": "M9_I",
+      "known": true,
+      "value": 2410,
+      "hex": "0x096A"
+    },
+    {
+      "addr": 118,
+      "name": "M9_OVP",
+      "known": true,
+      "value": 6200,
+      "hex": "0x1838"
+    },
+    {
+      "addr": 119,
+      "name": "M9_OCP",
+      "known": true,
+      "value": 2420,
+      "hex": "0x0974"
+    },
+    {
+      "addr": 182,
+      "name": "unknown",
+      "known": false,
+      "value": 139,
+      "hex": "0x008B"
+    },
+    {
+      "addr": 184,
+      "name": "unknown",
+      "known": false,
+      "value": 17937,
+      "hex": "0x4611"
+    },
+    {
+      "addr": 185,
+      "name": "unknown",
+      "known": false,
+      "value": 24,
+      "hex": "0x0018"
+    },
+    {
+      "addr": 186,
+      "name": "unknown",
+      "known": false,
+      "value": 16215,
+      "hex": "0x3F57"
+    },
+    {
+      "addr": 187,
+      "name": "unknown",
+      "known": false,
+      "value": 90,
+      "hex": "0x005A"
+    },
+    {
+      "addr": 188,
+      "name": "unknown",
+      "known": false,
+      "value": 6639,
+      "hex": "0x19EF"
+    },
+    {
+      "addr": 189,
+      "name": "unknown",
+      "known": false,
+      "value": 30,
+      "hex": "0x001E"
+    },
+    {
+      "addr": 190,
+      "name": "unknown",
+      "known": false,
+      "value": 24747,
+      "hex": "0x60AB"
+    },
+    {
+      "addr": 191,
+      "name": "unknown",
+      "known": false,
+      "value": 361,
+      "hex": "0x0169"
+    },
+    {
+      "addr": 192,
+      "name": "unknown",
+      "known": false,
+      "value": 6191,
+      "hex": "0x182F"
+    },
+    {
+      "addr": 193,
+      "name": "unknown",
+      "known": false,
+      "value": 5572,
+      "hex": "0x15C4"
+    },
+    {
+      "addr": 194,
+      "name": "unknown",
+      "known": false,
+      "value": 83,
+      "hex": "0x0053"
+    },
+    {
+      "addr": 195,
+      "name": "unknown",
+      "known": false,
+      "value": 66,
+      "hex": "0x0042"
+    },
+    {
+      "addr": 208,
+      "name": "unknown",
+      "known": false,
+      "value": 1200,
+      "hex": "0x04B0"
+    },
+    {
+      "addr": 209,
+      "name": "unknown",
+      "known": false,
+      "value": 1700,
+      "hex": "0x06A4"
+    },
+    {
+      "addr": 210,
+      "name": "unknown",
+      "known": false,
+      "value": 6200,
+      "hex": "0x1838"
+    },
+    {
+      "addr": 211,
+      "name": "unknown",
+      "known": false,
+      "value": 2390,
+      "hex": "0x0956"
+    },
+    {
+      "addr": 212,
+      "name": "unknown",
+      "known": false,
+      "value": 500,
+      "hex": "0x01F4"
+    },
+    {
+      "addr": 213,
+      "name": "unknown",
+      "known": false,
+      "value": 2410,
+      "hex": "0x096A"
+    },
+    {
+      "addr": 214,
+      "name": "unknown",
+      "known": false,
+      "value": 6200,
+      "hex": "0x1838"
+    },
+    {
+      "addr": 215,
+      "name": "unknown",
+      "known": false,
+      "value": 2420,
+      "hex": "0x0974"
+    },
+    {
+      "addr": 216,
+      "name": "unknown",
+      "known": false,
+      "value": 500,
+      "hex": "0x01F4"
+    },
+    {
+      "addr": 217,
+      "name": "unknown",
+      "known": false,
+      "value": 2410,
+      "hex": "0x096A"
+    },
+    {
+      "addr": 218,
+      "name": "unknown",
+      "known": false,
+      "value": 6200,
+      "hex": "0x1838"
+    },
+    {
+      "addr": 219,
+      "name": "unknown",
+      "known": false,
+      "value": 2420,
+      "hex": "0x0974"
+    },
+    {
+      "addr": 220,
+      "name": "unknown",
+      "known": false,
+      "value": 500,
+      "hex": "0x01F4"
+    },
+    {
+      "addr": 221,
+      "name": "unknown",
+      "known": false,
+      "value": 2410,
+      "hex": "0x096A"
+    },
+    {
+      "addr": 222,
+      "name": "unknown",
+      "known": false,
+      "value": 6200,
+      "hex": "0x1838"
+    },
+    {
+      "addr": 223,
+      "name": "unknown",
+      "known": false,
+      "value": 2420,
+      "hex": "0x0974"
+    },
+    {
+      "addr": 224,
+      "name": "unknown",
+      "known": false,
+      "value": 500,
+      "hex": "0x01F4"
+    },
+    {
+      "addr": 225,
+      "name": "unknown",
+      "known": false,
+      "value": 2410,
+      "hex": "0x096A"
+    },
+    {
+      "addr": 226,
+      "name": "unknown",
+      "known": false,
+      "value": 6200,
+      "hex": "0x1838"
+    },
+    {
+      "addr": 227,
+      "name": "unknown",
+      "known": false,
+      "value": 2420,
+      "hex": "0x0974"
+    },
+    {
+      "addr": 228,
+      "name": "unknown",
+      "known": false,
+      "value": 500,
+      "hex": "0x01F4"
+    },
+    {
+      "addr": 229,
+      "name": "unknown",
+      "known": false,
+      "value": 2410,
+      "hex": "0x096A"
+    },
+    {
+      "addr": 230,
+      "name": "unknown",
+      "known": false,
+      "value": 6200,
+      "hex": "0x1838"
+    },
+    {
+      "addr": 231,
+      "name": "unknown",
+      "known": false,
+      "value": 2420,
+      "hex": "0x0974"
+    },
+    {
+      "addr": 232,
+      "name": "unknown",
+      "known": false,
+      "value": 500,
+      "hex": "0x01F4"
+    },
+    {
+      "addr": 233,
+      "name": "unknown",
+      "known": false,
+      "value": 2410,
+      "hex": "0x096A"
+    },
+    {
+      "addr": 234,
+      "name": "unknown",
+      "known": false,
+      "value": 6200,
+      "hex": "0x1838"
+    },
+    {
+      "addr": 235,
+      "name": "unknown",
+      "known": false,
+      "value": 2420,
+      "hex": "0x0974"
+    },
+    {
+      "addr": 236,
+      "name": "unknown",
+      "known": false,
+      "value": 500,
+      "hex": "0x01F4"
+    },
+    {
+      "addr": 237,
+      "name": "unknown",
+      "known": false,
+      "value": 2410,
+      "hex": "0x096A"
+    },
+    {
+      "addr": 238,
+      "name": "unknown",
+      "known": false,
+      "value": 6200,
+      "hex": "0x1838"
+    },
+    {
+      "addr": 239,
+      "name": "unknown",
+      "known": false,
+      "value": 2420,
+      "hex": "0x0974"
+    }
+  ],
+  "unknown_nonzero": [
+    {
+      "addr": 182,
+      "name": "unknown",
+      "known": false,
+      "value": 139,
+      "hex": "0x008B"
+    },
+    {
+      "addr": 184,
+      "name": "unknown",
+      "known": false,
+      "value": 17937,
+      "hex": "0x4611"
+    },
+    {
+      "addr": 185,
+      "name": "unknown",
+      "known": false,
+      "value": 24,
+      "hex": "0x0018"
+    },
+    {
+      "addr": 186,
+      "name": "unknown",
+      "known": false,
+      "value": 16215,
+      "hex": "0x3F57"
+    },
+    {
+      "addr": 187,
+      "name": "unknown",
+      "known": false,
+      "value": 90,
+      "hex": "0x005A"
+    },
+    {
+      "addr": 188,
+      "name": "unknown",
+      "known": false,
+      "value": 6639,
+      "hex": "0x19EF"
+    },
+    {
+      "addr": 189,
+      "name": "unknown",
+      "known": false,
+      "value": 30,
+      "hex": "0x001E"
+    },
+    {
+      "addr": 190,
+      "name": "unknown",
+      "known": false,
+      "value": 24747,
+      "hex": "0x60AB"
+    },
+    {
+      "addr": 191,
+      "name": "unknown",
+      "known": false,
+      "value": 361,
+      "hex": "0x0169"
+    },
+    {
+      "addr": 192,
+      "name": "unknown",
+      "known": false,
+      "value": 6191,
+      "hex": "0x182F"
+    },
+    {
+      "addr": 193,
+      "name": "unknown",
+      "known": false,
+      "value": 5572,
+      "hex": "0x15C4"
+    },
+    {
+      "addr": 194,
+      "name": "unknown",
+      "known": false,
+      "value": 83,
+      "hex": "0x0053"
+    },
+    {
+      "addr": 195,
+      "name": "unknown",
+      "known": false,
+      "value": 66,
+      "hex": "0x0042"
+    },
+    {
+      "addr": 208,
+      "name": "unknown",
+      "known": false,
+      "value": 1200,
+      "hex": "0x04B0"
+    },
+    {
+      "addr": 209,
+      "name": "unknown",
+      "known": false,
+      "value": 1700,
+      "hex": "0x06A4"
+    },
+    {
+      "addr": 210,
+      "name": "unknown",
+      "known": false,
+      "value": 6200,
+      "hex": "0x1838"
+    },
+    {
+      "addr": 211,
+      "name": "unknown",
+      "known": false,
+      "value": 2390,
+      "hex": "0x0956"
+    },
+    {
+      "addr": 212,
+      "name": "unknown",
+      "known": false,
+      "value": 500,
+      "hex": "0x01F4"
+    },
+    {
+      "addr": 213,
+      "name": "unknown",
+      "known": false,
+      "value": 2410,
+      "hex": "0x096A"
+    },
+    {
+      "addr": 214,
+      "name": "unknown",
+      "known": false,
+      "value": 6200,
+      "hex": "0x1838"
+    },
+    {
+      "addr": 215,
+      "name": "unknown",
+      "known": false,
+      "value": 2420,
+      "hex": "0x0974"
+    },
+    {
+      "addr": 216,
+      "name": "unknown",
+      "known": false,
+      "value": 500,
+      "hex": "0x01F4"
+    },
+    {
+      "addr": 217,
+      "name": "unknown",
+      "known": false,
+      "value": 2410,
+      "hex": "0x096A"
+    },
+    {
+      "addr": 218,
+      "name": "unknown",
+      "known": false,
+      "value": 6200,
+      "hex": "0x1838"
+    },
+    {
+      "addr": 219,
+      "name": "unknown",
+      "known": false,
+      "value": 2420,
+      "hex": "0x0974"
+    },
+    {
+      "addr": 220,
+      "name": "unknown",
+      "known": false,
+      "value": 500,
+      "hex": "0x01F4"
+    },
+    {
+      "addr": 221,
+      "name": "unknown",
+      "known": false,
+      "value": 2410,
+      "hex": "0x096A"
+    },
+    {
+      "addr": 222,
+      "name": "unknown",
+      "known": false,
+      "value": 6200,
+      "hex": "0x1838"
+    },
+    {
+      "addr": 223,
+      "name": "unknown",
+      "known": false,
+      "value": 2420,
+      "hex": "0x0974"
+    },
+    {
+      "addr": 224,
+      "name": "unknown",
+      "known": false,
+      "value": 500,
+      "hex": "0x01F4"
+    },
+    {
+      "addr": 225,
+      "name": "unknown",
+      "known": false,
+      "value": 2410,
+      "hex": "0x096A"
+    },
+    {
+      "addr": 226,
+      "name": "unknown",
+      "known": false,
+      "value": 6200,
+      "hex": "0x1838"
+    },
+    {
+      "addr": 227,
+      "name": "unknown",
+      "known": false,
+      "value": 2420,
+      "hex": "0x0974"
+    },
+    {
+      "addr": 228,
+      "name": "unknown",
+      "known": false,
+      "value": 500,
+      "hex": "0x01F4"
+    },
+    {
+      "addr": 229,
+      "name": "unknown",
+      "known": false,
+      "value": 2410,
+      "hex": "0x096A"
+    },
+    {
+      "addr": 230,
+      "name": "unknown",
+      "known": false,
+      "value": 6200,
+      "hex": "0x1838"
+    },
+    {
+      "addr": 231,
+      "name": "unknown",
+      "known": false,
+      "value": 2420,
+      "hex": "0x0974"
+    },
+    {
+      "addr": 232,
+      "name": "unknown",
+      "known": false,
+      "value": 500,
+      "hex": "0x01F4"
+    },
+    {
+      "addr": 233,
+      "name": "unknown",
+      "known": false,
+      "value": 2410,
+      "hex": "0x096A"
+    },
+    {
+      "addr": 234,
+      "name": "unknown",
+      "known": false,
+      "value": 6200,
+      "hex": "0x1838"
+    },
+    {
+      "addr": 235,
+      "name": "unknown",
+      "known": false,
+      "value": 2420,
+      "hex": "0x0974"
+    },
+    {
+      "addr": 236,
+      "name": "unknown",
+      "known": false,
+      "value": 500,
+      "hex": "0x01F4"
+    },
+    {
+      "addr": 237,
+      "name": "unknown",
+      "known": false,
+      "value": 2410,
+      "hex": "0x096A"
+    },
+    {
+      "addr": 238,
+      "name": "unknown",
+      "known": false,
+      "value": 6200,
+      "hex": "0x1838"
+    },
+    {
+      "addr": 239,
+      "name": "unknown",
+      "known": false,
+      "value": 2420,
+      "hex": "0x0974"
+    }
+  ],
+  "unknown_nonzero_count": 45
+}

@@ -11,6 +11,7 @@ import json
 import logging
 import logging.handlers
 import sys
+from pathlib import Path
 from typing import Any
 
 import colorlog
@@ -173,6 +174,27 @@ def main() -> None:
     sp_prof.add_argument("--count", type=int, default=20, metavar="N", help="number of reads (default: 20)")
     sp_prof.add_argument("--sleep-ms", type=int, default=100, metavar="MS", help="inter-read delay during profiling (default: 100)")
 
+    sp_scan = sub.add_parser(
+        "register-scan",
+        help="scan Modbus registers and highlight undocumented non-zero values",
+        formatter_class=_F,
+    )
+    sp_scan.add_argument("--start", type=int, default=0, metavar="ADDR", help="first register (default: 0)")
+    sp_scan.add_argument("--end", type=int, default=300, metavar="ADDR", help="one-past-last register (default: 300)")
+    sp_scan.add_argument("--batch", type=int, default=50, metavar="N", help="registers per read request, 1..125 (default: 50)")
+    sp_scan.add_argument(
+        "--include-zero",
+        action="store_true",
+        help="include zero-valued registers in the output list (default: omitted)",
+    )
+    sp_scan.add_argument(
+        "--save-json",
+        type=Path,
+        default=None,
+        metavar="PATH",
+        help="optional path to write scan JSON",
+    )
+
     sp_plot = sub.add_parser(
         "plot",
         help="auto-plot one or more waveform JSONL files (shape detected from data)",
@@ -259,6 +281,17 @@ def main() -> None:
             result = worker.speed_test(args.count, register_profile=args.register_profile)
         elif c == "profile-serial":
             result = worker.profile_serial(args.count, args.sleep_ms)
+        elif c == "register-scan":
+            result = worker.register_scan(
+                start=args.start,
+                end=args.end,
+                batch=args.batch,
+                skip_zero=not args.include_zero,
+            )
+            if args.save_json is not None:
+                args.save_json.parent.mkdir(parents=True, exist_ok=True)
+                args.save_json.write_text(json.dumps(result, indent=2), encoding="utf-8")
+                result["saved"] = str(args.save_json)
 
         print(json.dumps(result, indent=2))
     except Exception as e:
