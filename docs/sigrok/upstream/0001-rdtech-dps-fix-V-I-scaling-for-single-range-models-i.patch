@@ -1,0 +1,73 @@
+From cbf2bfd2c4c378c9819721bd7e0a1030a6719c78 Mon Sep 17 00:00:00 2001
+From: Dan Tyrrell <dan@awto.au>
+Date: Fri, 29 May 2026 20:29:12 +1000
+Subject: [PATCH] rdtech-dps: fix V/I scaling for single-range models (inf/nan
+ readings)
+
+Single-range RD/DPS models (RD6006, RD6006P, RD6012, RD6018, RD6024, and
+the single-range DPS devices) report all measurements as "inf"/"nan":
+
+  V: inf V DC
+  I: -nan A DC
+  P: 0.00 W
+
+Cause: rdtech_dps_update_range() returns early for n_ranges <= 1 before
+calling rdtech_dps_update_multipliers(), and the acquisition path only calls
+update_multipliers() on a range *change* (curr_range != state.range), which
+never trips for a single-range device (both stay at the zero-init 0). So
+voltage_multiplier and current_multiplier remain 0, and every measurement is
+raw / 0 -> inf (or 0 / 0 -> nan). The same zero divisor also breaks
+config_list(), which computes 1 / voltage_multiplier for the step size.
+
+This is a regression from commit 02a4f485 ("rdtech-dps: add support for
+RD6006P, RD6012P and RD6024"), which moved the digit counts from a flat
+per-model field into a per-range table and gated multiplier initialisation
+behind update_multipliers() being called. Before that commit the multipliers
+were derived directly from the model and single-range devices worked.
+
+Fix: initialise curr_range = 0 and the multipliers for the sole range when
+n_ranges <= 1, restoring the pre-regression behaviour within the ranges
+framework. probe_device() already calls update_range() right after setting
+the model, so this is the natural init point. Multi-range handling is
+unchanged. The single-range path deliberately does NOT read REG_RD_RANGE
+(reg 20), whose meaning is device-specific (the driver itself notes it "could
+be battery related in other devices").
+
+Verified against three devices spanning three firmware versions, all fixed:
+RD6024 (id 60241, fw v1.39), RK6006 (id 60066, fw v1.09) and RD6006
+(id 60062, fw v1.42) all read correct V/I after the change.
+---
+ src/hardware/rdtech-dps/protocol.c | 16 +++++++++++++---
+ 1 file changed, 13 insertions(+), 3 deletions(-)
+
+diff --git a/src/hardware/rdtech-dps/protocol.c b/src/hardware/rdtech-dps/protocol.c
+index dfcffbb1..d88ffd39 100644
+--- a/src/hardware/rdtech-dps/protocol.c
++++ b/src/hardware/rdtech-dps/protocol.c
+@@ -246,10 +246,20 @@ SR_PRIV int rdtech_dps_update_range(const struct sr_dev_inst *sdi)
+ 	devc = sdi->priv;
+ 
+ 	/*
+-	 * Only update range if there are multiple ranges and data
+-	 * acquisition hasn't started.
++	 * Single-range models never report a RANGE register and the
++	 * acquisition path's STATE_RANGE update never fires for them, so the
++	 * voltage/current multipliers would stay at their zero-init value and
++	 * every measurement would divide by zero (V -> inf, I -> nan). Seed the
++	 * multipliers for the sole range (index 0) here, then we're done.
+ 	 */
+-	if (devc->model->n_ranges <= 1 || devc->acquisition_started)
++	if (devc->model->n_ranges <= 1) {
++		devc->curr_range = 0;
++		rdtech_dps_update_multipliers(sdi);
++		return SR_OK;
++	}
++
++	/* Multi-range: don't re-probe once acquisition is tracking the range. */
++	if (devc->acquisition_started)
+ 		return SR_OK;
+ 	if (devc->model->model_type != MODEL_RD)
+ 		return SR_ERR;
+-- 
+2.54.0
+
