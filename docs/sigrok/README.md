@@ -12,8 +12,9 @@ two drivers: `rdtech-dps` for DPS/DPH, `rdtech-rd` for Riden RD60xx). But:
 - The last sigrok **release** is libsigrok **0.5.2 (Aug 2019)**; the Riden
   driver is **master-only** (~1850 commits past 0.5.2). Distro packages
   (Fedora `libsigrok-0.5.2`) therefore lack it entirely.
-- Building master needs **two local patches** (below): one real upstream bug
-  fix, one for Python 3.14.
+- Building/using master here needs **three small patches** (below), kept
+  separate: (1) a real upstream bug fix (single-range multipliers → inf/nan),
+  (2) add the RK6006 model, (3) Python 3.14 in libsigrokdecode's configure.
 
 After building the stack into `/usr/local`:
 
@@ -73,10 +74,26 @@ cd /mnt/2tb/git/sigrokproject/sigrok-firmware-fx2lafw
 Installs `.fw` images to `/usr/local/share/sigrok-firmware/` (searched before
 `/usr/share`). Built version here: `0.1.7-10-g0f2d324` (2024-02).
 
-## The two patches
+## The patches
 
-Both live in [`patches/`](patches/) and are applied to the working trees on
-`/mnt/2tb` before building. They are NOT yet upstreamed (see below).
+Three patches live in [`patches/`](patches/), applied to the working trees on
+`/mnt/2tb` before building. None are upstreamed yet (see below). They are kept
+**separate on purpose** — the multiplier fix is an airtight, hardware-proven bug
+fix worth upstreaming; the RK6006 addition is scaling-verified only and travels
+on its own; the py3.14 fix is host-local.
+
+### Hardware test matrix (the multiplier bug)
+
+Tested on three real devices spanning three firmware bases — all single-range,
+all broken identically on the **unpatched** driver, all correct with the patch.
+This disproves the "it's a firmware change" and "RD6006 works / RD6024 differs"
+hypotheses: it is purely the software multiplier-init bug.
+
+| Device | id | firmware | unpatched | patched |
+|---|---|---|---|---|
+| RD6024 | 60241 | v1.39 | `V: inf  I: -nan` | `V: 4.99` ✓ |
+| RK6006 | 60066 | v1.09 | `V: inf  I: -nan` | `V: 5.00` ✓ |
+| RD6006 | 60062 | v1.42 | `V: inf  I: -nan` | `V: 4.99` ✓ |
 
 ### 1. libsigrok — `rdtech-rd` single-range multiplier init (real bug)
 
@@ -131,9 +148,27 @@ mechanism for a runtime multiplier change. So:
   its range-change path already initialises multipliers, so it was unaffected
   and the patch leaves it alone.
 
-**Definitely worth submitting upstream.**
+**Definitely worth submitting upstream** (on its own — see the RK6006 note).
 
-### 2. libsigrokdecode — Python 3.14 in configure (host-specific)
+### 2. libsigrok — add RK6006 model (separate; scaling-verified only)
+
+[`patches/libsigrok-rdtech-add-rk6006.patch`](patches/libsigrok-rdtech-add-rk6006.patch)
+
+The driver had no entry for the RK6006 (id **60066**) — sigrok rejects it with
+"Unknown model: RD60066". The RK6006 is the Bluetooth variant of the RD6006;
+electrically the V/I/P scaling is identical, so the patch adds one model-table
+line reusing the RD6006 ranges. **Verified for readout only:** with both patches
+applied it scans (`RK6006 v1.9 [S/N: 1036]`) and reads `V: 5.00` over USB
+serial.
+
+**Kept separate from the multiplier fix on purpose.** The RK is "completely
+different" in other respects (native BLE bridge, possibly preset/register
+quirks) that are *not* verified here — only the serial V/I/P readout path is.
+So this patch is staged for a *possible* separate upstream submission, not
+bundled with the (airtight) multiplier fix. Do not claim full RK6006 support
+on this basis.
+
+### 3. libsigrokdecode — Python 3.14 in configure (host-specific)
 
 [`patches/libsigrokdecode-python-3.14-configure.patch`](patches/libsigrokdecode-python-3.14-configure.patch)
 
@@ -153,8 +188,17 @@ sigrok uses the **development mailing list**, not GitHub PRs:
   `git send-email`, or
 - host a branch anywhere and notify via the list / `#sigrok` IRC.
 
-See the in-tree `HACKING` file. The libsigrok multiplier fix (patch 1) is the
-one worth submitting.
+See the in-tree `HACKING` file. Submit as **three independent patches**, each
+on its own merits (don't bundle):
+
+1. **Multiplier fix** — the strong one. Hardware-proven on RD6006/RK6006/RD6024
+   across three firmware versions; fixes the entire single-range Riden line.
+2. **Python 3.14 in configure** — worth upstreaming separately: 3.14 is current
+   and libsigrokdecode won't build against it as-is. Small, self-contained.
+   (Arguably they should switch to a version-agnostic `python3-embed` probe
+   rather than a hardcoded list — worth raising on the list.)
+3. **RK6006 model** — only if/when its non-scaling behaviour is verified; serial
+   V/I/P readout is proven, the rest is not. Lowest priority.
 
 ## Python / venv note (the awto-riden side)
 

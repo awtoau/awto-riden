@@ -1,0 +1,12 @@
+diff --git a/src/hardware/rdtech-dps/api.c b/src/hardware/rdtech-dps/api.c
+index c55b5896..4a80ea9c 100644
+--- a/src/hardware/rdtech-dps/api.c
++++ b/src/hardware/rdtech-dps/api.c
+@@ -135,6 +135,7 @@ static const struct rdtech_dps_model supported_models[] = {
+ 	 */
+ 	{ MODEL_RD, 60061, "RD6006" , ARRAY_AND_SIZE(ranges_rd6006),  },
+ 	{ MODEL_RD, 60062, "RD6006" , ARRAY_AND_SIZE(ranges_rd6006),  },
++	{ MODEL_RD, 60066, "RK6006" , ARRAY_AND_SIZE(ranges_rd6006),  }, /* RK6006: BT variant, electrically == RD6006 */
+ 	{ MODEL_RD, 60065, "RD6006P", ARRAY_AND_SIZE(ranges_rd6006p), },
+ 	{ MODEL_RD, 60121, "RD6012" , ARRAY_AND_SIZE(ranges_rd6012),  },
+ 	{ MODEL_RD, 60125, "RD6012P", ARRAY_AND_SIZE(ranges_rd6012p), },
