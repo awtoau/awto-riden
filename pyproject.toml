@@ -24,7 +24,10 @@ dependencies = [
 
 [project.scripts]
 awto-riden = "ttu_cli:main"
-awto-riden-mcp = "mcp_server:main"
+# awto-riden-mcp: parked (see issue #7 / mcp/). The MCP server lives at
+# mcp/mcp_server.py and is run directly (python3 mcp/mcp_server.py), not as a
+# console script — a "mcp.mcp_server" entry point would collide with the PyPI
+# `mcp` package it imports. Restore this line if MCP returns to the active path.
 
 [tool.uv]
 python = "3.14t"

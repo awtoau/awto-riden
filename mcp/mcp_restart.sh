@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
 # mcp_restart.sh — kill any running mcp_server.py so VS Code restarts it fresh.
 #
+# PARKED (see issue #7): the MCP server lives under mcp/ and is off the active
+# (CLI-first) path. This helper is kept for when MCP returns.
+#
 # Usage:
-#   bash scripts/mcp_restart.sh
+#   bash mcp/mcp_restart.sh
 #
 # After running this, click "Restart" in the VS Code MCP panel, or run
 # the command palette action "MCP: Restart Server > awto-riden".
 
 set -euo pipefail
+# Run from the repo root (this script lives in mcp/, so ../ is the root).
 cd "$(dirname "$0")/.."
 
 echo "=== awto-riden MCP restart helper ==="

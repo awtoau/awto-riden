@@ -53,11 +53,13 @@ The original daemon added unnecessary complexity:
 - ❌ No daemon, no socket server, no IPC
 - Used by: CLI, MCP server, tests
 
-### `mcp_server.py` — FastMCP stdio server
+### `mcp/mcp_server.py` — FastMCP stdio server (PARKED — see issue #7)
+- Parked under `mcp/`; development is CLI-first (`ttu_cli.py`). Kept for when
+  AI-agent / Copilot access is wanted again.
 - Opens serial port directly
-- Registers 9 tools: `rd_status()`, `rd_set_voltage()`, `rd_set_current()`, etc.
+- Registers tools: `rd_status()`, `rd_set_voltage()`, `rd_set_current()`, etc.
 - All tool calls share the serial connection
-- Usage: `python3 mcp_server.py --port /dev/ttyUSB0`
+- Usage: `python3 mcp/mcp_server.py --port /dev/ttyUSB0`
 
 ### `ttu_cli.py` — One-shot CLI
 - Opens serial port, runs one command, closes

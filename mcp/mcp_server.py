@@ -1,34 +1,28 @@
 """
 awto-riden MCP server — direct serial, multi-PSU.
 
+PARKED (see issue #7): development is CLI-first for now (ttu_cli.py talks to
+RidenWorker directly). The MCP server is not on the active path and was moved
+under ./mcp/. Kept for when AI-agent / Copilot access is wanted again.
+
 Exposes Riden RD60xx power supply control as MCP tools for Copilot / AI agents.
 Supports zero-config autodiscovery at startup, while still allowing explicit
 single-PSU or multi-PSU CLI configuration when needed.
 
 Default startup (autodiscover all likely serial ports, register found PSUs
 disconnected until the user approves them with rd_connect):
-        python3 mcp_server.py
+        python3 mcp/mcp_server.py
 
 Single PSU (explicit, backward compatible):
-        python3 mcp_server.py --port /dev/ttyUSB0 --baud 115200 --name bench
+        python3 mcp/mcp_server.py --port /dev/ttyUSB0 --baud 115200 --name bench
 
 Multiple PSUs (explicit):
-        python3 mcp_server.py \
+        python3 mcp/mcp_server.py \
                 --psu bench:/dev/ttyUSB0:115200:1 \
                 --psu mr11:/dev/ttyUSB1:115200:1
 
-.vscode/mcp.json example:
-        {
-            "servers": {
-                "awto-riden": {
-                    "type": "stdio",
-                    "command": "${workspaceFolder}/.venv/bin/python",
-                    "args": [
-                        "${workspaceFolder}/mcp_server.py"
-                    ]
-                }
-            }
-        }
+To re-enable VS Code discovery, copy mcp/mcp.json back to .vscode/mcp.json and
+point args at "${workspaceFolder}/mcp/mcp_server.py".
 
 All tools accept an optional 'psu' parameter (default "default" or first PSU).
 Use rd_list_psus() to see available PSUs and approval/connection state.
@@ -41,8 +35,14 @@ from __future__ import annotations
 import argparse
 import logging
 import logging.handlers
+import os
 import sys
 from typing import Any
+
+# Parked under ./mcp/, but the core modules (riden_daemon, riden_transport,
+# protocol) live in the repo root. Put the repo root on sys.path so the sibling
+# imports below resolve regardless of the working directory.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import colorlog
 from mcp.server.fastmcp import FastMCP

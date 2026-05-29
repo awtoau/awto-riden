@@ -1,17 +1,23 @@
-# Copilot Instructions — awto-mcp-riden
+# Copilot Instructions — awto-riden
 
-This repo is an MCP server that exposes a Riden RD60xx / RK60xx bench PSU as tools
-to VS Code Copilot (and any other MCP client). The hardware is connected via USB serial
-Modbus RTU.
+> **Now CLI-first (see issue #7).** The primary interface is the direct CLI
+> `ttu_cli.py` (`python3 ttu_cli.py --port /dev/ttyUSB0 status`), which talks to
+> `RidenWorker` over serial with no daemon. The **MCP server is parked** under
+> `mcp/` and is off the active path; the section below applies only if you
+> deliberately re-enable it.
+
+This repo controls a Riden RD60xx / RK60xx bench PSU over USB-serial Modbus RTU.
+It also ships a parked MCP server (`mcp/mcp_server.py`) exposing the PSU as tools
+to VS Code Copilot / any MCP client.
 
 ---
 
-## MCP server — restart procedure
+## MCP server — restart procedure (PARKED — only if re-enabled)
 
 The MCP server is a stdio process managed by VS Code. It **cannot restart itself** —
 VS Code owns the process lifecycle. To restart it:
 
-1. Run `bash scripts/mcp_restart.sh` — this kills any stale `mcp_server.py` process.
+1. Run `bash mcp/mcp_restart.sh` — this kills any stale `mcp_server.py` process.
 2. In VS Code: **Ctrl+Shift+P** → **MCP: Restart Server** → select **awto-riden**.
 
 The server will auto-detect the first available serial device (`/dev/ttyUSB*` →
@@ -127,13 +133,14 @@ Example: raw `V_OUT = 1200` with `v_multi = 100` → `12.00 V`.
 
 | File | Purpose |
 |---|---|
-| `mcp_server.py` | MCP server — FastMCP tools, argument parsing, PSU registry |
+| `ttu_cli.py` | **Primary interface** — direct-serial CLI (status, set, benchmark, discovery) |
 | `riden_daemon.py` | `RidenWorker` — high-level PSU API (waveform, status, logging, …) |
 | `riden_transport.py` | `SerialTransport` — raw Modbus RTU over pyserial (FC03/FC06/FC16) |
 | `riden_register.py` | Modbus register address constants |
-| `riden_protocol.py` | Register encode/decode helpers |
-| `.vscode/mcp.json` | VS Code MCP server launch config |
-| `scripts/mcp_restart.sh` | Kill stale server process before VS Code restart |
+| `protocol.py` | `make_ok`/`make_err`, error codes, wire-format docs |
+| `mcp/mcp_server.py` | MCP server — FastMCP tools, PSU registry (**parked**, see #7) |
+| `mcp/mcp.json` | VS Code MCP launch config (**parked** — copy to `.vscode/` to enable) |
+| `mcp/mcp_restart.sh` | Kill stale MCP server process before VS Code restart (**parked**) |
 | `scripts/transport_test.py` | Quick serial sanity check — reads status, no PSU changes |
 
 ---
@@ -148,7 +155,7 @@ source .venv/bin/activate
 python3 scripts/transport_test.py
 
 # Kill stale MCP server (then restart from VS Code MCP panel)
-bash scripts/mcp_restart.sh
+bash mcp/mcp_restart.sh
 
 # Profile serial timing
 python3 scripts/transport_test.py --port /dev/ttyUSB1
