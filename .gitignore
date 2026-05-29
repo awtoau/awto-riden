@@ -8,6 +8,11 @@ build/
 .pytest_cache/
 *.jsonl
 *.png
+
+# Regenerated per-machine by the settings-sync hook (77daa0e) from
+# awto-dan/code/vscode/settings.example.json — contains absolute /home paths
+# and a per-user workspaceStorage UUID, so it must not be tracked.
+.vscode/settings.json
 # Track all generated documentation PNGs
 !docs/data/*.png
 !docs/*.png
