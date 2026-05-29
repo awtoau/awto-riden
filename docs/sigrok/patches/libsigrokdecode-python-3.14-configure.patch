@@ -1,0 +1,12 @@
+diff --git a/configure.ac b/configure.ac
+index dc04166..ac54942 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -100,6 +100,7 @@ SR_PKG_CHECK_SUMMARY([srd_pkglibs_summary])
+ # first, since usually only that variant will add "-lpython3.8".
+ # https://docs.python.org/3/whatsnew/3.8.html#debug-build-uses-the-same-abi-as-release-build
+ SR_PKG_CHECK([python3], [SRD_PKGLIBS],
++	[python-3.14-embed], [python-3.13-embed],
+ 	[python-3.12-embed], [python-3.11-embed],
+ 	[python-3.10-embed], [python-3.9-embed], [python-3.8-embed], [python3-embed],
+ 	[python-3.8 >= 3.8], [python-3.7 >= 3.7], [python-3.6 >= 3.6], [python-3.5 >= 3.5],

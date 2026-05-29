@@ -1,0 +1,28 @@
+diff --git a/src/hardware/rdtech-dps/protocol.c b/src/hardware/rdtech-dps/protocol.c
+index dfcffbb1..d88ffd39 100644
+--- a/src/hardware/rdtech-dps/protocol.c
++++ b/src/hardware/rdtech-dps/protocol.c
+@@ -246,10 +246,20 @@ SR_PRIV int rdtech_dps_update_range(const struct sr_dev_inst *sdi)
+ 	devc = sdi->priv;
+ 
+ 	/*
+-	 * Only update range if there are multiple ranges and data
+-	 * acquisition hasn't started.
++	 * Single-range models never report a RANGE register and the
++	 * acquisition path's STATE_RANGE update never fires for them, so the
++	 * voltage/current multipliers would stay at their zero-init value and
++	 * every measurement would divide by zero (V -> inf, I -> nan). Seed the
++	 * multipliers for the sole range (index 0) here, then we're done.
+ 	 */
+-	if (devc->model->n_ranges <= 1 || devc->acquisition_started)
++	if (devc->model->n_ranges <= 1) {
++		devc->curr_range = 0;
++		rdtech_dps_update_multipliers(sdi);
++		return SR_OK;
++	}
++
++	/* Multi-range: don't re-probe once acquisition is tracking the range. */
++	if (devc->acquisition_started)
+ 		return SR_OK;
+ 	if (devc->model->model_type != MODEL_RD)
+ 		return SR_ERR;
