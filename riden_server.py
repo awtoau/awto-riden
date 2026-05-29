@@ -198,8 +198,8 @@ def _dispatch(req: dict[str, Any]) -> dict[str, Any]:
                     fw = w.firmware()
                     info["model"]    = fw.get("type") or fw.get("model")
                     info["firmware"] = fw.get("fw") or fw.get("firmware")
-                except Exception:
-                    pass
+                except Exception as exc:
+                    log.warning("list_psus: could not read identity for '%s': %s", name, exc)
             psus.append(info)
         return make_ok({"psus": psus, "default": _default_psu})
 

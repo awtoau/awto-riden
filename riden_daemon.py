@@ -675,6 +675,14 @@ class RidenWorker:
 
         return self._execute("status", _run)
 
+    def firmware(self) -> dict[str, Any]:
+        """Device identity (model/type, id, serial, firmware) + transport fields."""
+        def _run() -> dict[str, Any]:
+            with self._lock:
+                return self._device_info(self._assert_connected())
+
+        return self._execute("firmware", _run)
+
     def set_voltage(self, volts: float) -> dict[str, Any]:
         def _run() -> dict[str, Any]:
             with self._lock:
