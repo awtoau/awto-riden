@@ -137,44 +137,59 @@ def _c(text: str, code: str) -> str:
     return f"{_CSI}{code}m{text}{_RESET}"
 
 
+def _fmt_mode(st: dict[str, Any]) -> str:
+    """Show both regulation modes with the ACTIVE one highlighted.
+
+    Renders e.g. "CV·cc" (in constant-voltage) or "cv·CC" (in constant-current):
+    active label bright+coloured (CV cyan, CC bold yellow), the other dim grey,
+    so the current regulation state is unmistakable at a glance.
+    """
+    mode = st.get("cv_cc", "?")
+    cc = mode == "CC"
+    cv_txt = _c("cv", "90") if cc else _c("CV", "1;36")
+    cc_txt = _c("CC", "1;33") if cc else _c("cc", "90")
+    return f"{cv_txt}{_c('·', '90')}{cc_txt}"
+
+
 def _fmt_line(st: dict[str, Any]) -> str:
-    """Compact one-line summary, coloured by output state / mode."""
+    """Compact one-line summary, measured values first.
+
+    Leads with what you watch live — V/I/P out, temp, status — and trails the
+    setpoints/input as context. Coloured by output state / mode / protection.
+    """
     on = st.get("output")
     out_txt = _c("ON ", "1;32") if on else _c("OFF", "1;31")
-    mode = st.get("cv_cc", "?")
-    mode_txt = _c(mode, "36" if mode == "CV" else "33")
+    mode_txt = _fmt_mode(st)
     prot = st.get("protect", "none")
-    prot_txt = _c(prot, "1;31") if prot not in (None, "none") else "none"
-    v_set, i_set = st.get("v_set"), st.get("i_set")
-    v_out = _c(f"{st.get('v_out'):>6}", "1;37")
-    i_out = _c(f"{st.get('i_out'):>6}", "1;37")
+    prot_txt = _c(f"PROT:{prot}", "1;31") if prot not in (None, "none") else ""
+    # Measured outputs — the headline numbers, bright.
+    v_out = _c(f"{st.get('v_out'):>7.2f}", "1;37")
+    i_out = _c(f"{st.get('i_out'):>7.3f}", "1;37")
+    p_out = _c(f"{st.get('p_out'):>7.2f}", "1;37")
+    temp = _c(f"{st.get('temp_c')}°C", "32")
     return (
-        f"{out_txt}  "
-        f"set {v_set:>6}V/{i_set:<5}A  "
-        f"out {v_out}V {i_out}A {st.get('p_out'):>6}W  "
-        f"{mode_txt}  prot {prot_txt}  "
-        f"vin {st.get('v_in')}V  {st.get('temp_c')}°C"
+        f"{out_txt} {mode_txt}  "
+        f"{v_out} V  {i_out} A  {p_out} W   "
+        f"{temp}  "
+        f"{_c('·', '90')} set {st.get('v_set')}V/{st.get('i_set')}A "
+        f"vin {st.get('v_in')}V {prot_txt}"
     )
 
 
-def _print_table(st: dict[str, Any]) -> None:
-    """Redraw a small dashboard in place (home cursor + clear each row)."""
+def _table_rows(st: dict[str, Any]) -> list[str]:
+    """Render the dashboard rows (without positioning)."""
     on = st.get("output")
     rows = [
         ("output",  _c("ON", "1;32") if on else _c("OFF", "1;31")),
-        ("mode",    st.get("cv_cc")),
-        ("protect", st.get("protect")),
+        ("mode",    _fmt_mode(st)),
+        ("protect", str(st.get("protect"))),
         ("V set / out", f"{st.get('v_set')} / {_c(str(st.get('v_out')), '1;37')} V"),
         ("I set / out", f"{st.get('i_set')} / {_c(str(st.get('i_out')), '1;37')} A"),
         ("P out",   f"{st.get('p_out')} W"),
         ("V in",    f"{st.get('v_in')} V"),
         ("temp",    f"{st.get('temp_c')} °C"),
     ]
-    # Move cursor to top-left of our block and redraw.
-    sys.stdout.write(_CSI + f"{len(rows) + 1}A")  # up N+1 lines
-    for label, value in rows:
-        sys.stdout.write(f"{_c(label, '90'):<22} {value}{_CLR_EOL}\n")
-    sys.stdout.flush()
+    return [f"{_c(label, '90'):<22} {value}" for label, value in rows]
 
 
 def _run_monitor(worker: RidenWorker, mode: str, interval_ms: int, count: int) -> None:
@@ -186,16 +201,23 @@ def _run_monitor(worker: RidenWorker, mode: str, interval_ms: int, count: int) -
     """
     interval_s = max(0.0, interval_ms / 1000.0)
     n = 0
-    if mode == "table":
-        # Reserve the block so the first _print_table's cursor-up lands right.
-        sys.stdout.write("\n" * 9)
+    table_started = False
     try:
         while True:
             st = worker.status()
             if mode == "jsonl":
                 print(json.dumps({"ts": time.time(), **st}), flush=True)
             elif mode == "table":
-                _print_table(st)
+                rows = _table_rows(st)
+                # Each frame: N rows, every row terminated by CLR_EOL + "\n", so
+                # after a frame the cursor sits on a fresh line N lines below the
+                # block top. The next frame moves up exactly N and overwrites.
+                # First frame just draws (cursor starts on a fresh line).
+                if table_started:
+                    sys.stdout.write(_CSI + f"{len(rows)}A")
+                sys.stdout.write("\r" + "".join(r + _CLR_EOL + "\n" for r in rows))
+                sys.stdout.flush()
+                table_started = True
             else:  # line
                 sys.stdout.write("\r" + _fmt_line(st) + _CLR_EOL)
                 sys.stdout.flush()
@@ -502,6 +524,10 @@ def main() -> None:
     try:
         worker = RidenWorker(port=args.port, baud=args.baud, address=args.address)
         worker.open()
+    except KeyboardInterrupt:
+        # Ctrl-C during connect (open does a serial profile loop) — exit quietly,
+        # no traceback.
+        sys.exit(130)
     except Exception as e:
         print(json.dumps({"error": f"failed to open PSU: {e}", "code": _error_code(e)}), file=sys.stderr)
         sys.exit(1)
