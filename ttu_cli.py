@@ -104,8 +104,12 @@ def _setup_logging(verbose: bool) -> None:
         pass
 
     handler = colorlog.StreamHandler(sys.stderr)
+    # High-resolution timestamp: ISO time + milliseconds. Probe timing logs
+    # carry their own sub-ms (perf_counter) durations in the message; this gives
+    # each line a wall-clock anchor at the finest resolution the formatter has.
     handler.setFormatter(colorlog.ColoredFormatter(
-        "%(log_color)s%(levelname)-8s%(reset)s %(message)s",
+        "%(log_color)s%(asctime)s.%(msecs)03d %(levelname)-8s%(reset)s %(name)s: %(message)s",
+        datefmt="%H:%M:%S",
         log_colors={
             "DEBUG":    "cyan",
             "INFO":     "green",
@@ -178,21 +182,38 @@ def main() -> None:
     sp_discover.add_argument(
         "--timeout",
         type=float,
-        default=0.5,
+        default=0.2,
         metavar="S",
-        help="read timeout per probe in seconds (default: 0.5)",
+        # 200 ms: a present device replies within ~one firmware scan cycle
+        # (measured RTT ~131-160 ms), so 0.2 s covers a real reply with margin
+        # while an absent address fails fast. Operational reads use 0.5 s; this
+        # is discovery (presence detection), which should not dwell on silence.
+        help="read timeout per probe in seconds (default: 0.2)",
     )
     sp_discover.add_argument(
         "--retries",
         type=int,
-        default=3,
+        default=1,
         metavar="N",
-        help="retries per probe (default: 3)",
+        # Discovery only asks "is something there?" — a present device answers
+        # on the first attempt. Retries only multiply the cost of empty
+        # addresses, so default to a single probe.
+        help="retries per probe (default: 1)",
     )
     sp_discover.add_argument(
         "--include-errors",
         action="store_true",
         help="include failed probe attempts in output",
+    )
+    sp_discover.add_argument(
+        "--max-scan",
+        type=float,
+        default=5.0,
+        metavar="S",
+        # Hard total-time budget for the whole scan; un-probed combinations are
+        # reported as "skipped" rather than dropped silently. Stops a large
+        # port x address grid from running away on silent addresses.
+        help="max total scan time in seconds (default: 5.0)",
     )
     sub.add_parser("capabilities", help="show API capabilities and error codes", formatter_class=_F)
     sub.add_parser("status", help="show current PSU state", formatter_class=_F)
@@ -355,6 +376,7 @@ def main() -> None:
             timeout_s=args.timeout,
             retries=args.retries,
             include_errors=args.include_errors,
+            max_scan_s=args.max_scan,
         )
         print(json.dumps(result, indent=2))
         return

@@ -26,7 +26,13 @@ import colorlog
 import psutil
 
 from riden_register import Register as R
-from riden_transport import SerialTransport, _model_info, list_serial_ports
+from riden_transport import (
+    SerialTransport,
+    _model_info,
+    list_riden_candidate_ports,
+    list_serial_ports,
+    list_serial_ports_ranked,
+)
 
 from protocol import (
     DEFAULT_ADDRESS,
@@ -43,6 +49,13 @@ log = logging.getLogger("riden.daemon")
 
 _start_time   = time.monotonic()
 _FREE_THREADED = sys.version_info >= (3, 13) and not sys._is_gil_enabled()
+
+# Max concurrent discovery probes. The limit is bus contention, not CPU: every
+# serial port shares one USB host controller, and flooding it with one thread
+# per (port × address) starves a present device's reads. 8 overlaps the
+# blocking 200ms probe waits without saturating the bus — measured to find the
+# PSU reliably while keeping a wide scan well under 1s.
+DISCOVERY_MAX_WORKERS = 8
 
 
 # ---------------------------------------------------------------------------
@@ -1670,69 +1683,161 @@ def discover_devices(
     ports: list[str] | None = None,
     baud: int = 115200,
     addresses: list[int] | None = None,
-    timeout_s: float = 0.5,
-    retries: int = 3,
+    timeout_s: float = 0.2,
+    retries: int = 1,
     include_errors: bool = False,
+    max_scan_s: float = 5.0,
 ) -> dict[str, Any]:
     """Discover reachable Riden PSUs across serial ports and Modbus addresses.
 
     This helper is intentionally outside RidenWorker so CLI/MCP can discover
     devices before any worker is configured.
+
+    Probes run in parallel (one thread per port x address) via a
+    ThreadPoolExecutor — each probe is a blocking serial read that releases the
+    GIL while waiting, and under the free-threaded build (python3.14t) they run
+    with true parallelism. Wall-clock is therefore ~one probe timeout regardless
+    of how many ports/addresses are scanned, instead of their serial sum.
+
+    A hard total-time budget (``max_scan_s``) still caps the whole scan: any
+    probe not finished by the deadline is recorded as ``skipped`` (no silent
+    truncation) and its thread is left to unwind on its own short timeout. With
+    the defaults (0.2 s / 1 retry) every probe is <=~0.25 s, so even a wide grid
+    completes well inside the budget.
     """
     if addresses is None or len(addresses) == 0:
         addresses = [1]
     addresses = [int(a) for a in addresses if 1 <= int(a) <= 247]
     if not addresses:
         raise ValueError("addresses must contain at least one Modbus address in range 1..247")
+    if max_scan_s <= 0:
+        raise ValueError("max_scan_s must be > 0")
 
     if ports is None or len(ports) == 0:
-        # Default to likely external serial adapters only; avoid scanning ttyS*.
-        detected = [p["device"] for p in list_serial_ports() if p.get("device")]
-        likely = [
-            d for d in detected
-            if ("/ttyUSB" in d or "/ttyACM" in d or "/rfcomm" in d)
-        ]
-        ports = likely if likely else detected
+        # Identify Riden ports by USB VID (CH340 0x1A86) BEFORE opening anything.
+        # This skips the host's ST-Link / Pico / ESP32-JTAG CDC-ACM devices,
+        # which are not Riden and can hang on a Modbus probe's open(). Only fall
+        # back to the broader ranked list if no CH340 port is present (e.g. a
+        # generic USB-serial adapter or a Bluetooth rfcomm link).
+        ports = list_riden_candidate_ports()
+        if not ports:
+            ports = [
+                d for d in list_serial_ports_ranked()
+                if ("/ttyUSB" in d or "/ttyACM" in d or "/rfcomm" in d)
+            ]
 
     found: list[dict[str, Any]] = []
     errors: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+    timed_out = False
 
-    for port in ports:
+    log.info(
+        "discovery: %d port(s) × %d address(es), timeout=%.0fms retries=%d budget=%.1fs, parallel by port",
+        len(ports), len(addresses), timeout_s * 1000, retries, max_scan_s,
+    )
+
+    def _scan_port(port: str) -> dict[str, Any]:
+        """Probe all addresses on ONE port, serially, in a single worker thread.
+
+        Parallelism is across ports, never within a port: opening the same
+        serial device from multiple threads at once corrupts every reader, so
+        each port has exactly one owner thread that tries its addresses in
+        sequence. Stops at the first address that answers (one PSU per port).
+        Times each address at the highest resolution available (perf_counter).
+        """
+        port_found: list[dict[str, Any]] = []
+        port_errors: list[dict[str, Any]] = []
         for addr in addresses:
+            t0 = time.perf_counter()
             tr = SerialTransport(
-                port=port,
-                baud=baud,
-                address=addr,
-                retries=max(1, int(retries)),
-                timeout=float(timeout_s),
+                port=port, baud=baud, address=addr,
+                retries=max(1, int(retries)), timeout=float(timeout_s),
             )
             try:
                 tr.open()
                 psu = RidenDevice(tr)
                 fw_raw = int(getattr(psu, "fw", 0))
-                found.append({
-                    "port": port,
-                    "baud": int(baud),
-                    "address": int(addr),
+                ms = (time.perf_counter() - t0) * 1000.0
+                log.debug("probe %s addr=%d → FOUND %s in %.3fms",
+                          port, addr, getattr(psu, "type", "?"), ms)
+                port_found.append({
+                    "port": port, "baud": int(baud), "address": int(addr),
                     "model": getattr(psu, "type", "unknown"),
                     "device_id": int(getattr(psu, "id", 0)),
                     "serial": str(getattr(psu, "sn", "")),
                     "fw_raw": fw_raw,
                     "fw": f"v{fw_raw // 100}.{fw_raw % 100:02d}",
+                    "probe_ms": round(ms, 3),
                 })
+                break  # one PSU per port; don't probe further addresses
             except Exception as exc:
-                if include_errors:
-                    errors.append({
-                        "port": port,
-                        "baud": int(baud),
-                        "address": int(addr),
-                        "error": str(exc),
-                    })
+                ms = (time.perf_counter() - t0) * 1000.0
+                log.debug("probe %s addr=%d → none in %.3fms (%s)", port, addr, ms, exc)
+                port_errors.append({
+                    "port": port, "baud": int(baud), "address": int(addr),
+                    "error": str(exc), "probe_ms": round(ms, 3),
+                })
             finally:
                 try:
                     tr.close()
                 except Exception:
                     pass
+        return {"found": port_found, "errors": port_errors}
+
+    # Fan out across PORTS (per CODING_STYLE bounded fan-out). One DAEMON thread
+    # per port (capped by a semaphore) — never multiple threads on the same
+    # device. Daemon threads are deliberate: a serial open() can block past the
+    # budget (the read timeout does not bound open()), and ThreadPoolExecutor
+    # uses non-daemon workers whose stuck open() would keep the whole process
+    # alive at interpreter exit even after we have the result. Daemon threads
+    # are abandoned cleanly when the process exits. Wall-clock is ~(addresses ×
+    # probe_timeout) per port, all ports overlapped — roughly one port's cost.
+    workers = min(DISCOVERY_MAX_WORKERS, len(ports))
+    slots = threading.Semaphore(max(1, workers))
+    results_lock = threading.Lock()
+    results: dict[str, dict[str, Any]] = {}
+
+    def _worker(port: str) -> None:
+        with slots:
+            res = _scan_port(port)
+        with results_lock:
+            results[port] = res
+
+    t_start = time.perf_counter()
+    threads = []
+    for port in ports:
+        t = threading.Thread(target=_worker, args=(port,), daemon=True,
+                             name=f"riden-discover-{port}")
+        t.start()
+        threads.append((port, t))
+
+    # Join each port's thread within the remaining budget. A port whose thread
+    # has not finished by the deadline is recorded as skipped (every address on
+    # it) and its daemon thread is abandoned — no silent truncation, no hang.
+    deadline = time.monotonic() + float(max_scan_s)
+    for port, t in threads:
+        remaining = deadline - time.monotonic()
+        if remaining > 0:
+            t.join(timeout=remaining)
+        if t.is_alive():
+            timed_out = True
+            for addr in addresses:
+                skipped.append({"port": port, "baud": int(baud), "address": int(addr)})
+
+    with results_lock:
+        for port, _ in threads:
+            res = results.get(port)
+            if res is None:
+                continue  # already counted as skipped above
+            found.extend(res["found"])
+            if include_errors:
+                errors.extend(res["errors"])
+
+    total_ms = (time.perf_counter() - t_start) * 1000.0
+    log.info(
+        "discovery: %d found, %d skipped (timed_out=%s) in %.3fms",
+        len(found), len(skipped), timed_out, total_ms,
+    )
 
     return {
         "ports_scanned": ports,
@@ -1741,6 +1846,10 @@ def discover_devices(
         "found": found,
         "found_count": len(found),
         "errors": errors if include_errors else [],
+        "timed_out": timed_out,
+        "max_scan_s": float(max_scan_s),
+        "scan_ms": round(total_ms, 3),
+        "skipped": skipped,
     }
 
     def _usb_topology_info(self) -> dict[str, Any]:

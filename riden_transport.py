@@ -129,6 +129,60 @@ def find_riden_port(fallback: str = "/dev/ttyUSB0") -> tuple[str, int]:
     return best_device, best_baud
 
 
+def riden_port_score(device: str, vid: int | None, pid: int | None) -> int:
+    """Likelihood that a serial port is a Riden PSU. Higher = more likely.
+
+    Same scoring as find_riden_port, exposed so callers (e.g. discovery) can
+    order ports best-first:
+      3 — QinHeng VID (0x1A86) AND a PID known to be a Riden adapter
+      2 — QinHeng VID (0x1A86) — any CH340/341/343 chip
+      1 — ttyUSB* generic USB-serial
+      0 — ttyACM* or anything else
+    """
+    if vid == _RIDEN_VID:
+        info = KNOWN_DEVICES.get((vid, pid))
+        return 3 if info and "Riden" in info.get("notes", "") else 2
+    if "ttyUSB" in device:
+        return 1
+    return 0
+
+
+def list_serial_ports_ranked() -> list[str]:
+    """All detected serial-port device paths, ordered Riden-likelihood first.
+
+    Ties broken by device name for a stable order. Used by discovery so the
+    most likely PSU ports are probed before any time budget is exhausted.
+    """
+    ranked = sorted(
+        list_ports.comports(),
+        key=lambda p: (-riden_port_score(p.device, p.vid, p.pid), p.device),
+    )
+    return [p.device for p in ranked]
+
+
+def list_riden_candidate_ports(min_score: int = 2) -> list[str]:
+    """Serial ports likely to be a Riden, identified by USB VID — not by opening.
+
+    Default ``min_score=2`` keeps only QinHeng/CH340 ports (VID 0x1A86), the
+    chip every Riden RD60xx/RK60xx uses. This deliberately excludes ST-Link,
+    Pico/CMSIS-DAP, ESP32-JTAG and other CDC-ACM debug devices: probing those
+    with Modbus is pointless and can hang on open(), so discovery should never
+    touch them. Identify by ID first; open only real candidates.
+
+    Returns best-first (highest score first). May be empty if no CH340 port is
+    present — callers decide whether to widen the net.
+    """
+    scored = [
+        (riden_port_score(p.device, p.vid, p.pid), p.device)
+        for p in list_ports.comports()
+    ]
+    candidates = sorted(
+        ((score, dev) for score, dev in scored if score >= min_score),
+        key=lambda sd: (-sd[0], sd[1]),
+    )
+    return [dev for _score, dev in candidates]
+
+
 def list_serial_ports() -> list[dict]:
     """Return info dicts for all detected serial ports, with Riden scoring."""
     results = []

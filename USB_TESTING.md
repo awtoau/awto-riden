@@ -170,6 +170,44 @@ If daemon connects but queries hang:
 - Try `--level DEBUG` for detailed I/O logs
 - Verify PSU Modbus RTU is enabled (check PSU manual)
 
+## Concurrency: one thread per port (proven)
+
+**Never open the same serial port from more than one thread at once.** Discovery
+fans out across *ports* in parallel but probes addresses *within* a port
+serially, for a concrete, measured reason.
+
+Controlled trial against a live RD6024 on `/dev/ttyUSB0` (5 reads of the
+identity block each):
+
+| Trial | Setup | Result |
+|---|---|---|
+| A | 5 reads, **sequential**, same port | **5/5 succeed** (~135 ms each) |
+| B | 5 threads, **same port + addr**, concurrent | **0/5** — all time out at 271 ms |
+| C | 5 threads, same port, **addr 1..5**, concurrent | **0/5** — all time out |
+
+### Why — and what it is *not*
+
+It is **not** a Python problem and **not** a libusb thread-safety problem.
+`/dev/ttyUSB*` is a kernel character device served by the in-kernel
+`ch341-uart` driver; pyserial talks to it with plain `open()`/`read()`/`write()`
+syscalls — **libusb is not in the path at all** (verified: `import serial`
+pulls in zero usb modules). libusb's threading caveats are for userspace USB
+drivers that claim the interface directly; this stack never touches it.
+
+The real cause is **sharing one half-duplex, unframed byte stream**:
+
+1. The kernel allows multiple `open()`s of one tty and does **not** serialize them.
+2. Each probe does `reset_input_buffer()` (a `TCIFLUSH` on the *shared* RX
+   buffer) → write request → read reply.
+3. Modbus RTU carries no in-stream tag saying whose reply is whose. With threads
+   interleaved, one thread's flush discards the bytes another is waiting for, and
+   replies fragment across readers. Every CRC check fails → every probe times out
+   (which is why *all five* fail, not just the losers).
+
+A C program doing the same thing would fail identically. The fix is not a lock
+or a "thread-safe" library — it is **one owner thread per port**, which is how
+`discover_devices` is written.
+
 ## Integration with Copilot
 
 Once daemon is running, register MCP server in VS Code:
