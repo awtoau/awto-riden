@@ -13,8 +13,11 @@ No external `riden` pip package is required. Transport and register logic are ve
 
 ## Capabilities at a glance
 
-Fastest mode (no cadence sleep) and paced cadences under connected load are now
-captured in one combined graph:
+Latest high-density sine waveform capture (RD6024, 0.5 Hz):
+
+![High-density sine waveform capture](docs/data/sine_wave_high_density.png)
+
+Connected-load timing capabilities remain available here:
 
 ![Connected-load timing capabilities](docs/data/timing_capabilities_overview.png)
 
@@ -46,6 +49,9 @@ The graphs below were regenerated from session measurements and summarized in
 
 For the dedicated MR11 waveform/timing page, see:
 [docs/mr11_sine_test.md](docs/mr11_sine_test.md)
+
+For a full register map page (known registers + unknown gaps/ranges), see:
+[docs/registers.md](docs/registers.md)
 
 ### 1) Poll pacing vs measured RTT
 
