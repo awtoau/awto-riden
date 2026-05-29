@@ -12,6 +12,7 @@ import json
 import logging
 import logging.handlers
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -122,6 +123,96 @@ def _setup_logging(verbose: bool) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Live monitor
+# ---------------------------------------------------------------------------
+
+# ANSI helpers — colour the live displays without pulling in a TUI dependency
+# (the style guide forbids adding rich/textual). CLI human output only.
+_CSI = "\x1b["
+_RESET = _CSI + "0m"
+_CLR_EOL = _CSI + "K"          # clear to end of line
+
+
+def _c(text: str, code: str) -> str:
+    return f"{_CSI}{code}m{text}{_RESET}"
+
+
+def _fmt_line(st: dict[str, Any]) -> str:
+    """Compact one-line summary, coloured by output state / mode."""
+    on = st.get("output")
+    out_txt = _c("ON ", "1;32") if on else _c("OFF", "1;31")
+    mode = st.get("cv_cc", "?")
+    mode_txt = _c(mode, "36" if mode == "CV" else "33")
+    prot = st.get("protect", "none")
+    prot_txt = _c(prot, "1;31") if prot not in (None, "none") else "none"
+    v_set, i_set = st.get("v_set"), st.get("i_set")
+    v_out = _c(f"{st.get('v_out'):>6}", "1;37")
+    i_out = _c(f"{st.get('i_out'):>6}", "1;37")
+    return (
+        f"{out_txt}  "
+        f"set {v_set:>6}V/{i_set:<5}A  "
+        f"out {v_out}V {i_out}A {st.get('p_out'):>6}W  "
+        f"{mode_txt}  prot {prot_txt}  "
+        f"vin {st.get('v_in')}V  {st.get('temp_c')}°C"
+    )
+
+
+def _print_table(st: dict[str, Any]) -> None:
+    """Redraw a small dashboard in place (home cursor + clear each row)."""
+    on = st.get("output")
+    rows = [
+        ("output",  _c("ON", "1;32") if on else _c("OFF", "1;31")),
+        ("mode",    st.get("cv_cc")),
+        ("protect", st.get("protect")),
+        ("V set / out", f"{st.get('v_set')} / {_c(str(st.get('v_out')), '1;37')} V"),
+        ("I set / out", f"{st.get('i_set')} / {_c(str(st.get('i_out')), '1;37')} A"),
+        ("P out",   f"{st.get('p_out')} W"),
+        ("V in",    f"{st.get('v_in')} V"),
+        ("temp",    f"{st.get('temp_c')} °C"),
+    ]
+    # Move cursor to top-left of our block and redraw.
+    sys.stdout.write(_CSI + f"{len(rows) + 1}A")  # up N+1 lines
+    for label, value in rows:
+        sys.stdout.write(f"{_c(label, '90'):<22} {value}{_CLR_EOL}\n")
+    sys.stdout.flush()
+
+
+def _run_monitor(worker: RidenWorker, mode: str, interval_ms: int, count: int) -> None:
+    """Poll worker.status() at a fixed cadence and render to the terminal.
+
+    Runs until Ctrl-C (KeyboardInterrupt) or `count` samples. The poll cannot
+    outrun the device firmware (~131-160ms RTT); interval is the floor between
+    samples, not a guarantee.
+    """
+    interval_s = max(0.0, interval_ms / 1000.0)
+    n = 0
+    if mode == "table":
+        # Reserve the block so the first _print_table's cursor-up lands right.
+        sys.stdout.write("\n" * 9)
+    try:
+        while True:
+            st = worker.status()
+            if mode == "jsonl":
+                print(json.dumps({"ts": time.time(), **st}), flush=True)
+            elif mode == "table":
+                _print_table(st)
+            else:  # line
+                sys.stdout.write("\r" + _fmt_line(st) + _CLR_EOL)
+                sys.stdout.flush()
+            n += 1
+            if count and n >= count:
+                break
+            if interval_s:
+                time.sleep(interval_s)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        if mode in ("line", "table"):
+            sys.stdout.write("\n")
+            sys.stdout.flush()
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -218,6 +309,32 @@ def main() -> None:
     sub.add_parser("capabilities", help="show API capabilities and error codes", formatter_class=_F)
     sub.add_parser("status", help="show current PSU state", formatter_class=_F)
     sub.add_parser("info", help="show PSU process health", formatter_class=_F)
+
+    sp_mon = sub.add_parser("monitor", help="live-poll PSU state to the terminal until Ctrl-C", formatter_class=_F)
+    sp_mon.add_argument(
+        "--mode",
+        choices=("line", "jsonl", "table"),
+        default="line",
+        help="display style: in-place line | scrolling JSONL dump | redrawn table (default: line)",
+    )
+    sp_mon.add_argument(
+        "--interval",
+        type=int,
+        default=250,
+        metavar="MS",
+        # 250 ms is comfortably above the device's ~131-160ms Modbus RTT (its
+        # firmware scan floor) with margin, and a calm refresh rate for a human
+        # watching the terminal. Lower it for tighter sampling; it cannot poll
+        # faster than the firmware answers.
+        help="poll interval in ms (default: 250)",
+    )
+    sp_mon.add_argument(
+        "--count",
+        type=int,
+        default=0,
+        metavar="N",
+        help="stop after N samples (default: 0 = until Ctrl-C)",
+    )
 
     sp_v = sub.add_parser("set-voltage", help="set output voltage (V)", formatter_class=_F)
     sp_v.add_argument("volts", type=float, help="voltage in volts")
@@ -388,6 +505,18 @@ def main() -> None:
     except Exception as e:
         print(json.dumps({"error": f"failed to open PSU: {e}", "code": _error_code(e)}), file=sys.stderr)
         sys.exit(1)
+
+    # Live monitor: loops until Ctrl-C / --count, so it never reaches the
+    # one-shot print path below.
+    if args.subcmd == "monitor":
+        try:
+            _run_monitor(worker, args.mode, args.interval, args.count)
+        except Exception as e:
+            print(json.dumps({"error": str(e), "code": _error_code(e)}), file=sys.stderr)
+            sys.exit(1)
+        finally:
+            worker.close()
+        return
 
     # Execute command
     try:
