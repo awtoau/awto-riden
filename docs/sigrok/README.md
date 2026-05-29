@@ -126,12 +126,32 @@ driver are gated behind a multi-range or range-*change* condition
 only on `curr_range != state.range`, which never trips when both are the
 zero-init 0). Nothing initialises the multipliers for a single-range device.
 
-Caveat: it's unclear how this shipped broken for nearly the entire Riden line
-unnoticed — likely because `rdtech-rd` is master-only (never released) and
-lightly used. But the breakage and the fix are both confirmed against real
-hardware. Note the same zero divisor also hits the **config / "cal"-style**
-paths: `config_list` does `1 / devc->voltage_multiplier` (api.c), so
-voltage/current step queries are affected too, not just live acquisition.
+**It's a dated regression, not a since-forever flaw.** `git log -L` on
+`update_range()` shows exactly two commits ever touched this area:
+
+- **`02a4f485` (2023-01-16) "rdtech-dps: add support for RD6006P, RD6012P and
+  RD6024"** — introduced the whole range/multiplier mechanism. Before it, the
+  digits were a **flat per-model field** set once (`devc->model->voltage_digits`
+  / `current_digits`), so single-range models always had correct multipliers.
+  This commit moved digits into a `ranges[curr_range]` array and made the
+  multipliers depend on `update_multipliers()` *being called* — but the new
+  `update_range()` returns early for `n_ranges == 1` before calling it. i.e.
+  **adding multi-range P-model support regressed every single-range model.**
+- **`1bd63ed7` (2023-09-28) "rephrase how model specific ranges are handled"** —
+  a follow-up refactor; changed the guard `== 1` → `<= 1` but kept the early
+  return, so the regression persisted.
+
+So this is the "a change to how ranges work broke Riden" case: the driver was
+correct until the Jan-2023 range refactor. That it went unnoticed fits —
+`rdtech-rd` is master-only (never released) and lightly used. Breakage and fix
+are confirmed against real hardware (3 devices, 3 firmwares). Note the same zero
+divisor also hits the **config / "cal"-style** paths: `config_list` does
+`1 / devc->voltage_multiplier` (api.c), so voltage/current step queries are
+affected too, not just live acquisition.
+
+This dating also strengthens the upstream report: the fix can reference the
+introducing commit (`02a4f485`) and frame it as restoring the pre-2023
+single-range behaviour within the new ranges framework.
 
 **What a Riden "range" actually is.** Every Riden is single operating-range in
 the normal sense (one V/I envelope per model). The only model the driver marks
