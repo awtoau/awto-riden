@@ -1,6 +1,8 @@
 # BLE Support Roadmap
 
-**Status:** v0.1 is USB-serial only. BLE support is planned for v0.2+.
+**Status:** USB-serial only. BLE support is planned. Tracking issue:
+[#6 — Implement native BLE transport](https://github.com/awtoau/awto-riden/issues/6).
+See `BT_STATUS.md` for the current verified hardware/pairing state.
 
 ## Motivation
 
@@ -12,10 +14,13 @@ These are paired but not yet integrated with the daemon.
 
 ## Current State
 
-- ✅ USB/serial transport working (via ShayBox/Riden library)
-- ✅ Modbus RTU protocol understood (slave addr 1, 115200 baud)
+- ✅ USB/serial transport working via our own `SerialTransport`
+  (`riden_transport.py`) — no upstream library dependency. The ShayBox/Riden
+  project is now only the source of the register layout, not a runtime import.
+- ✅ Modbus RTU protocol implemented in-house (FC03/FC06/FC16, slave addr 1, 115200 baud)
 - ✅ `bleak>=0.22` already in `pyproject.toml` (BLE client library)
-- ⏳ Native BLE transport **not yet implemented**
+- ⏳ Native BLE transport: `BleTransport` exists as a stub in `riden_transport.py`
+  that raises `NotImplementedError` — **not yet implemented**
 
 ## Discovery Attempt (v0.1.0-alpha)
 
@@ -57,59 +62,59 @@ async with BleakClient("88:BB:52:09:E5:43") as client:
 - `bleak` docs: https://github.com/hbldh/bleak
 
 ### Phase 2: Transport Layer
-**Goal:** Implement native Modbus RTU over BLE in daemon.
+**Goal:** Implement native Modbus RTU over BLE behind the existing transport interface.
 
-**Changes to `riden_daemon.py`:**
+The architecture has changed since this roadmap was first written: there is now
+a `RidenTransport` ABC in `riden_transport.py` with `SerialTransport`,
+`TcpTransport`, and a `BleTransport` **stub**. `RidenDevice`/`RidenWorker`
+(`riden_daemon.py`) talk only to that ABC — they have no knowledge of serial vs
+BLE. So BLE support means **filling in `BleTransport`**, not editing the daemon.
 
-1. Add BLE connection logic to `RidenWorker.open()`:
+`BleTransport` must implement the same surface as `SerialTransport`:
+`open()`, `close()`, `address`, and `read(register, count)` /
+`write(register, value)` / `write_multiple(register, values)` — building the
+same Modbus RTU FC03/FC06/FC16 frames (the framing helpers can be shared with
+`SerialTransport`).
+
+1. **Connect + discover characteristics** in `open()`:
    ```python
-   if self._is_ble_mac(self._port):
-       self._psu = None  # No pyserial object for BLE
-       self._ble_client = await BleakClient(self._port).connect()
-       self._ble_rx_char = <discovered RX characteristic UUID>
-       self._ble_tx_char = <discovered TX characteristic UUID>
-   else:
-       self._psu = Riden(port=self._port, ...)
+   def open(self) -> None:
+       # bleak is async; bridge to the sync transport API via a private
+       # event loop running in a background thread (see Risks below).
+       self._client = BleakClient(self._mac)
+       self._loop.run(self._client.connect())
+       # Discover the Modbus TX (write) and RX (notify) characteristic UUIDs.
+       self._loop.run(self._client.start_notify(self._rx_char, self._on_notify))
    ```
 
-2. Update `RidenWorker.query()` to branch on BLE vs serial:
+2. **Frame a request, await the notify reply** in `read()`/`write()`:
    ```python
-   if self._ble_client:
-       # Write to TX characteristic, wait for RX notify
-       await self._ble_client.write_gatt_char(self._ble_tx_char, request)
-       response = await asyncio.wait_for(self._ble_rx_queue.get(), timeout=1.0)
-   else:
-       # Serial write/read (existing code)
-       self._psu.write(request)
-       response = self._psu.read()
+   def read(self, register, count=1):
+       request = self._build_fc03_request(register, count)   # shared with SerialTransport
+       self._loop.run(self._client.write_gatt_char(self._tx_char, request))
+       response = self._rx_queue.get(timeout=self._timeout)   # filled by _on_notify
+       return self._parse_fc03_response(response, count)
    ```
 
-3. Background task to subscribe to BLE RX notifications:
+3. **RX notify callback** pushes reassembled frames onto a queue:
    ```python
-   async def _ble_notify_callback(sender, data):
-       self._ble_rx_queue.put_nowait(data)
-   
-   await self._ble_client.start_notify(
-       self._ble_rx_char,
-       _ble_notify_callback
-   )
+   def _on_notify(self, _sender, data: bytearray) -> None:
+       self._rx_queue.put(bytes(data))   # may need reassembly across MTU chunks
    ```
 
 ### Phase 3: Integration & Testing
 **Goal:** Full integration test with real RK6006 device.
 
 **Steps:**
-1. Run daemon with BLE device MAC:
+1. Query status directly via the CLI, passing the paired device MAC as `--port`
+   (`BleTransport` is selected when the port looks like a MAC, not a `/dev/...`
+   path). Replace `<MAC>` with the actual paired device — none is paired today,
+   see `BT_STATUS.md`:
    ```bash
-   python3 riden_daemon.py --port 88:BB:52:09:E5:43 --baud 115200
+   python3 ttu_cli.py --port <MAC> status
    ```
 
-2. Query status via CLI:
-   ```bash
-   python3 ttu_cli.py status
-   ```
-
-3. Verify response matches USB serial baseline
+2. Verify response matches the USB serial baseline (`--port /dev/ttyUSB0`)
 
 4. Stress test: Rapid command sequences, concurrent clients, network latency
 
@@ -140,13 +145,10 @@ pip install bleak>=0.22
 # Run discovery
 python3 ble_discover.py
 
-# Update RK6006 GATT UUIDs in riden_daemon.py
+# Update RK6006 GATT UUIDs in BleTransport (riden_transport.py)
 
-# Launch daemon
-python3 riden_daemon.py --port 88:BB:52:09:E5:43
-
-# Test
-python3 ttu_cli.py status
+# Test directly via the CLI, passing the paired MAC as --port
+python3 ttu_cli.py --port <MAC> status
 ```
 
 ## References
