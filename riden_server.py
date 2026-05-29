@@ -4,6 +4,10 @@ awto-riden socket server — owns all serial/BLE access, multiplexes it over
 a Unix domain socket so that multiple clients (MCP, CLI, scripts) can share
 one PSU session.
 
+PARKED (see issue #7): development is CLI-first for now (ttu_cli.py talks to
+RidenWorker directly, no daemon). This server is kept for a future
+multi-instrument device hub (Sork/Pulse/nScope), not the active path.
+
 Usage:
     python3 riden_server.py [OPTIONS]
 
