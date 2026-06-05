@@ -172,6 +172,12 @@ If daemon connects but queries hang:
 
 ## Concurrency: one thread per port (proven)
 
+> **Canonical home:** the one-thread-per-port rule now lives in the shared
+> awto-serial library at `vendor/awto-mcp-serial/docs/DISCOVERY.md`, because it
+> is a generic serial concern that every device repo needs. `discover_devices`
+> here is a thin wrapper over that shared `discover()` primitive. The measured
+> RD6024 trial below is the original source data behind the rule — kept here.
+
 **Never open the same serial port from more than one thread at once.** Discovery
 fans out across *ports* in parallel but probes addresses *within* a port
 serially, for a concrete, measured reason.

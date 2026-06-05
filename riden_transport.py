@@ -79,6 +79,76 @@ def _load_vendor_known_devices() -> dict[tuple[int, int], dict]:
 KNOWN_DEVICES = _load_vendor_known_devices()
 
 
+def _load_vendor_serial_daemon():
+    """Load the vendored awto-serial ``serial_daemon`` module in isolation.
+
+    The generic device-discovery primitive (``discover``) lives in the shared
+    awto-serial library; we consume it from the ``vendor/awto-mcp-serial``
+    submodule rather than reimplementing it. The catch: ``serial_daemon.py`` does
+    ``from protocol import ...``, and this repo has its OWN top-level
+    ``protocol.py`` (a different module). So we temporarily register the vendored
+    ``protocol`` in ``sys.modules`` for the duration of the load and restore the
+    previous binding afterwards — the vendored daemon binds the vendored protocol
+    constants, and riden's own ``import protocol`` is left untouched.
+
+    Returns the loaded module, or ``None`` if the submodule is absent (callers
+    degrade gracefully and tell the user to init submodules).
+    """
+    import sys as _sys
+
+    vendor_dir = _os.path.join(_os.path.dirname(__file__), "vendor", "awto-mcp-serial")
+    sd_path = _os.path.join(vendor_dir, "serial_daemon.py")
+    proto_path = _os.path.join(vendor_dir, "protocol.py")
+    if not (_os.path.exists(sd_path) and _os.path.exists(proto_path)):
+        log.warning(
+            "vendored awto-serial not found under %s; discovery primitive unavailable "
+            "(run 'git submodule update --init --recursive')",
+            vendor_dir,
+        )
+        return None
+
+    # Load the vendored protocol under a private, collision-free name first.
+    proto_spec = importlib.util.spec_from_file_location(
+        "awto_serial_vendor_protocol", proto_path,
+    )
+    if proto_spec is None or proto_spec.loader is None:
+        log.warning("failed to spec vendored protocol at %s; discovery unavailable", proto_path)
+        return None
+    proto_mod = importlib.util.module_from_spec(proto_spec)
+
+    saved_protocol = _sys.modules.get("protocol")
+    try:
+        proto_spec.loader.exec_module(proto_mod)
+        # Expose it as 'protocol' ONLY while serial_daemon's top-level
+        # `from protocol import ...` runs, so it binds the vendored constants.
+        _sys.modules["protocol"] = proto_mod
+        sd_spec = importlib.util.spec_from_file_location(
+            "awto_serial_vendor_daemon", sd_path,
+        )
+        if sd_spec is None or sd_spec.loader is None:
+            log.warning("failed to spec vendored serial_daemon at %s", sd_path)
+            return None
+        sd_mod = importlib.util.module_from_spec(sd_spec)
+        _sys.modules[sd_spec.name] = sd_mod  # register before exec (import best practice)
+        sd_spec.loader.exec_module(sd_mod)
+        return sd_mod
+    except Exception as exc:
+        log.warning("error loading vendored serial_daemon from %s: %s", sd_path, exc)
+        return None
+    finally:
+        # Restore riden's own 'protocol' binding (or clear our temporary one).
+        if saved_protocol is not None:
+            _sys.modules["protocol"] = saved_protocol
+        else:
+            _sys.modules.pop("protocol", None)
+
+
+_vendor_serial_daemon = _load_vendor_serial_daemon()
+
+# The shared discovery primitive, or None if the submodule is not initialised.
+vendor_discover = getattr(_vendor_serial_daemon, "discover", None)
+
+
 # ---------------------------------------------------------------------------
 # Serial port auto-detection for Riden PSUs
 # ---------------------------------------------------------------------------
@@ -299,12 +369,41 @@ class SerialTransport(RidenTransport):
         self._retries = retries
         self._timeout = timeout
         self._serial: Serial | None = None
+        self._borrowed = False
+
+    @classmethod
+    def from_open_serial(
+        cls,
+        ser: Serial,
+        address: int = 1,
+        retries: int = 3,
+    ) -> "SerialTransport":
+        """Wrap an ALREADY-OPEN ``serial.Serial`` instead of opening a new port.
+
+        Used by the shared ``discover()`` probe: discover() owns the port
+        lifecycle (one ``open()`` per port, enforcing one-owner-thread-per-port),
+        so the probe must never open its own handle. ``open()``/``close()`` are
+        therefore no-ops on a borrowed transport — the port is left for its owner
+        to reset and close.
+        """
+        self = cls(
+            getattr(ser, "port", "<borrowed>"),
+            baud=getattr(ser, "baudrate", 115200),
+            address=address,
+            retries=retries,
+            timeout=getattr(ser, "timeout", 0.5) or 0.5,
+        )
+        self._serial = ser
+        self._borrowed = True
+        return self
 
     # ------------------------------------------------------------------
     # Lifecycle
     # ------------------------------------------------------------------
 
     def open(self) -> None:
+        if self._borrowed:
+            return  # port already open and owned by discover() — never reopen
         try:
             self._serial = Serial(
                 self._port,
@@ -323,6 +422,8 @@ class SerialTransport(RidenTransport):
             raise IOError(f"failed to open {self._port}: {e}")
 
     def close(self) -> None:
+        if self._borrowed:
+            return  # borrowed port — its owner (discover) closes it, not us
         if self._serial is not None:
             try:
                 self._serial.close()
