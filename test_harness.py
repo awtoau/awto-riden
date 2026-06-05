@@ -25,10 +25,11 @@ import os
 import subprocess
 import sys
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from protocol import make_err, make_ok
-from riden_daemon import RidenWorker
+from riden_daemon import RidenWorker, discover_devices
+from riden_transport import SerialTransport
 
 # Repo root — used as cwd for the CLI subprocess test. Derived from this
 # file's location so a rename of the checkout dir can't stale it again.
@@ -311,6 +312,126 @@ class TestDataStructures(unittest.TestCase):
         result = make_err(msg)
         self.assertFalse(result["ok"])
         self.assertEqual(result["error"], msg)
+
+
+# ---------------------------------------------------------------------------
+# Layer 5 — discover_devices (delegates to the shared awto-serial discover())
+# ---------------------------------------------------------------------------
+
+def _fake_serial_factory():
+    """serial.Serial(...) stand-in: returns a MagicMock port honouring attrs.
+
+    The shared discover() opens the port; the Modbus probe then borrows this
+    handle via SerialTransport.from_open_serial, so no real I/O happens (the
+    RidenDevice layer is mocked).
+    """
+    def _factory(port, baudrate=None, timeout=None, write_timeout=None):
+        m = MagicMock()
+        m.is_open = True
+        m.port = port
+        m.baudrate = baudrate
+        m.timeout = timeout
+        return m
+    return _factory
+
+
+def _mock_riden_device_class(target_address):
+    """Build a RidenDevice stand-in that 'answers' only at *target_address*.
+
+    Construction reads the identity block on real hardware and raises on a
+    silent address; the mock mirrors that — it raises for any other address so
+    the probe's address sweep behaves exactly as against a real bus.
+    """
+    class _MockDev:
+        def __init__(self, transport):
+            self.transport = transport
+            self.address = getattr(transport, "address", 1)
+            if self.address != target_address:
+                raise TimeoutError(f"no device at addr {self.address}")
+            self.id = 60241          # RD6024
+            self.sn = "00012345"
+            self.fw = 144
+            self.type = "RD6024"
+
+        def update(self):
+            pass
+
+        def close(self):
+            pass
+
+    return _MockDev
+
+
+class TestDiscovery(unittest.TestCase):
+
+    def test_from_open_serial_is_borrowed(self):
+        """A borrowed transport never opens or closes the underlying port."""
+        ser = MagicMock()
+        ser.port = "/dev/ttyUSB0"
+        ser.baudrate = 115200
+        ser.timeout = 0.2
+        tr = SerialTransport.from_open_serial(ser, address=3, retries=2)
+        self.assertEqual(tr.address, 3)
+        self.assertIs(tr._serial, ser)
+        tr.open()                       # no-op — already open and owned by discover
+        tr.close()                      # no-op — owner closes it, not us
+        ser.close.assert_not_called()
+
+    def test_discover_finds_device(self):
+        with patch("serial.Serial", side_effect=_fake_serial_factory()), \
+             patch("riden_daemon.RidenDevice", _mock_riden_device_class(1)), \
+             patch("riden_daemon.time.sleep"):           # skip the 50 ms CH34x settle
+            result = discover_devices(
+                ports=["/dev/ttyUSB0"], baud=115200, addresses=[1, 2],
+                timeout_s=0.05, max_scan_s=2.0,
+            )
+        self.assertEqual(result["found_count"], 1)
+        self.assertEqual(result["ports_scanned"], ["/dev/ttyUSB0"])
+        self.assertEqual(result["addresses_scanned"], [1, 2])
+        self.assertFalse(result["timed_out"])
+        dev = result["found"][0]
+        self.assertEqual(dev["port"], "/dev/ttyUSB0")
+        self.assertEqual(dev["baud"], 115200)
+        self.assertEqual(dev["address"], 1)
+        self.assertEqual(dev["model"], "RD6024")
+        self.assertEqual(dev["device_id"], 60241)
+        self.assertEqual(dev["serial"], "00012345")
+        self.assertEqual(dev["fw"], "v1.44")
+        self.assertIsNotNone(dev["probe_ms"])
+
+    def test_discover_no_device_records_per_address_errors(self):
+        with patch("serial.Serial", side_effect=_fake_serial_factory()), \
+             patch("riden_daemon.RidenDevice", _mock_riden_device_class(99)), \
+             patch("riden_daemon.time.sleep"):
+            result = discover_devices(
+                ports=["/dev/ttyUSB0"], baud=115200, addresses=[1, 2],
+                timeout_s=0.05, max_scan_s=2.0, include_errors=True,
+            )
+        self.assertEqual(result["found_count"], 0)
+        self.assertFalse(result["timed_out"])
+        # One error per swept address (richer detail than the shared primitive).
+        addr_errors = [e for e in result["errors"] if "address" in e]
+        self.assertEqual({e["address"] for e in addr_errors}, {1, 2})
+
+    def test_discover_no_candidate_ports(self):
+        with patch("riden_daemon.list_riden_candidate_ports", return_value=[]), \
+             patch("riden_daemon.list_serial_ports_ranked", return_value=[]), \
+             patch("serial.Serial", side_effect=AssertionError("must not open any port")):
+            result = discover_devices(baud=115200, addresses=[1])
+        self.assertEqual(result["found_count"], 0)
+        self.assertEqual(result["ports_scanned"], [])
+        self.assertEqual(result["skipped"], [])
+
+    def test_discover_response_shape_unchanged(self):
+        with patch("serial.Serial", side_effect=_fake_serial_factory()), \
+             patch("riden_daemon.RidenDevice", _mock_riden_device_class(1)), \
+             patch("riden_daemon.time.sleep"):
+            result = discover_devices(ports=["/dev/ttyUSB0"], addresses=[1], timeout_s=0.05)
+        for key in (
+            "ports_scanned", "baud", "addresses_scanned", "found", "found_count",
+            "errors", "timed_out", "max_scan_s", "scan_ms", "skipped",
+        ):
+            self.assertIn(key, result, f"discover_devices response missing {key}")
 
 
 if __name__ == "__main__":
