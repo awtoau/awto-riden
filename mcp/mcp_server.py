@@ -1,9 +1,11 @@
 """
 awto-riden MCP server — direct serial, multi-PSU.
 
-PARKED (see issue #7): development is CLI-first for now (awto_riden.py talks to
-RidenWorker directly). The MCP server is not on the active path and was moved
-under ./mcp/. Kept for when AI-agent / Copilot access is wanted again.
+ACTIVE: re-enabled and wired into VS Code via .vscode/mcp.json. Verified
+end-to-end — all tools register and rd_discover/connect/firmware/status work
+against a live RK6006. (The CLI, awto_riden.py, remains the primary path and
+talks to RidenWorker directly.) The separate socket-server / multi-instrument
+"device hub" idea stays parked under issue #7 — that is not this stdio server.
 
 Exposes Riden RD60xx power supply control as MCP tools for Copilot / AI agents.
 Supports zero-config autodiscovery at startup, while still allowing explicit
