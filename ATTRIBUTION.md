@@ -51,15 +51,19 @@ to a revision under our control and does not introduce code changes.
 
 ---
 
-## tjko/riden-flashtool *(indirect reference only)*
+## tjko/riden-flashtool *(protocol reference only — no code used)*
 
-**Repository:** https://github.com/tjko/riden-flashtool  
-**License:** AGPL-3.0  
+**Repository:** https://github.com/tjko/riden-flashtool (fork of bdd/riden-flashtool)  
+**License:** AGPL-3.0 (repository `LICENSE`; the `flash-rd.py` header inconsistently states GPL-3.0 — both are copyleft)  
 **Author:** Timo Kokkonen (tjko), mdjurfeldt, cygeus, JorgHendriks  
 
-Riden firmware flash tool, credited by ShayBox/Riden as the basis for their
-`Bootloader` class. Included here for lineage completeness. **Not used by this project.**
-AGPL-3.0 terms do not apply to this codebase.
+Riden firmware flash tool. This project's `riden_flash.py` is an **independent,
+clean MIT reimplementation** of the publicly-observable Riden serial *bootloader
+protocol* (the `queryd`/`upfirm`/`getinf` text commands, the 64-byte chunked
+transfer, and the `SYSTEM`←`REBOOT_MAGIC` reboot — the latter already documented
+in `riden_register.py`). Only those **factual protocol/interface details** were
+used as a reference; **no source code was copied or adapted** from riden-flashtool.
+Accordingly the AGPL-3.0 copyleft does **not** propagate to this MIT codebase.
 
 ---
 
@@ -70,6 +74,6 @@ AGPL-3.0 terms do not apply to this codebase.
 | Baldanos/rd6006 | Apache-2.0 | Indirectly (via ShayBox) | No |
 | ShayBox/Riden | MIT | Yes (via awto-au/riden fork) | No |
 | awto-au/riden | MIT | Yes | No |
-| tjko/riden-flashtool | AGPL-3.0 | No | No |
+| tjko/riden-flashtool | AGPL-3.0 | Protocol reference only (no code) | No |
 
 This project is released under the **MIT license**. See `LICENSE` for the full text.

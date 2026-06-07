@@ -4,7 +4,7 @@ Unix domain socket defined in protocol.py.
 
 PARKED (see issue #7): development is CLI-first for now. This client pairs with
 riden_server.py, which is kept for a future multi-instrument hub, not the
-active path. Use ttu_cli.py for direct serial control.
+active path. Use awto_riden.py for direct serial control.
 
 Usage as a library:
     from riden_client import RidenClient

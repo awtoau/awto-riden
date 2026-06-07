@@ -54,17 +54,17 @@ The original daemon added unnecessary complexity:
 - Used by: CLI, MCP server, tests
 
 ### `mcp/mcp_server.py` — FastMCP stdio server (PARKED — see issue #7)
-- Parked under `mcp/`; development is CLI-first (`ttu_cli.py`). Kept for when
+- Parked under `mcp/`; development is CLI-first (`awto_riden.py`). Kept for when
   AI-agent / Copilot access is wanted again.
 - Opens serial port directly
 - Registers tools: `rd_status()`, `rd_set_voltage()`, `rd_set_current()`, etc.
 - All tool calls share the serial connection
 - Usage: `python3 mcp/mcp_server.py --port /dev/ttyUSB0`
 
-### `ttu_cli.py` — One-shot CLI
+### `awto_riden.py` — One-shot CLI
 - Opens serial port, runs one command, closes
 - Subcommands: `status`, `set-voltage`, `set-current`, `output`, `power-cycle`, `info`
-- Usage: `python3 ttu_cli.py --port /dev/ttyUSB0 status`
+- Usage: `python3 awto_riden.py --port /dev/ttyUSB0 status`
 
 ### `protocol.py` — Shared helpers (kept for history)
 - JSON encoding/decoding for potential future daemon rebuild
@@ -81,11 +81,11 @@ The original daemon added unnecessary complexity:
 ### CLI Command
 
 ```bash
-python3 ttu_cli.py --port /dev/ttyUSB0 status
-python3 ttu_cli.py --port /dev/ttyUSB0 set-voltage 12.0
-python3 ttu_cli.py --port /dev/ttyUSB0 set-current 2.0
-python3 ttu_cli.py --port /dev/ttyUSB0 output on
-python3 ttu_cli.py --port /dev/ttyUSB0 power-cycle --seconds 3
+python3 awto_riden.py --port /dev/ttyUSB0 status
+python3 awto_riden.py --port /dev/ttyUSB0 set-voltage 12.0
+python3 awto_riden.py --port /dev/ttyUSB0 set-current 2.0
+python3 awto_riden.py --port /dev/ttyUSB0 output on
+python3 awto_riden.py --port /dev/ttyUSB0 power-cycle --seconds 3
 ```
 
 ### MCP Server (for Copilot)
@@ -116,7 +116,7 @@ python3 mcp_server.py --port /dev/ttyUSB0
 
 ```toml
 [project.scripts]
-awto-riden = "ttu_cli:main"
+awto-riden = "awto_riden:main"
 awto-riden-mcp = "mcp_server:main"
 ```
 

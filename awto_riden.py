@@ -331,6 +331,28 @@ def main() -> None:
     sub.add_parser("capabilities", help="show API capabilities and error codes", formatter_class=_F)
     sub.add_parser("status", help="show current PSU state", formatter_class=_F)
     sub.add_parser("info", help="show PSU process health", formatter_class=_F)
+    sub.add_parser("firmware", help="show device identity (model, id, serial, firmware)", formatter_class=_F)
+
+    sp_flash = sub.add_parser(
+        "flash",
+        help="reboot into the bootloader and optionally flash a firmware .bin",
+        formatter_class=_F,
+    )
+    sp_flash.add_argument(
+        "firmware",
+        nargs="?",
+        help="firmware .bin file; if omitted, only reboot to bootloader and report info",
+    )
+    sp_flash.add_argument(
+        "--yes",
+        action="store_true",
+        help="confirm: this reboots the unit into the bootloader (and writes firmware if a file is given)",
+    )
+    sp_flash.add_argument(
+        "--force",
+        action="store_true",
+        help="flash even if model / firmware-file checks fail (DANGEROUS)",
+    )
 
     sp_mon = sub.add_parser("monitor", help="live-poll PSU state to the terminal until Ctrl-C", formatter_class=_F)
     sp_mon.add_argument(
@@ -519,6 +541,40 @@ def main() -> None:
         )
         print(json.dumps(result, indent=2))
         return
+    if args.subcmd == "flash":
+        # Flashing speaks the bootloader protocol, not Modbus — handle it before
+        # the normal RidenWorker connect. It changes device state, so require --yes.
+        from riden_flash import flash_firmware, FlashError
+        if not args.yes:
+            print(json.dumps({
+                "error": "the flash command reboots the unit into the bootloader "
+                         "(and overwrites firmware if a file is given). Re-run with --yes.",
+                "code": "ECONFIRM",
+            }, indent=2), file=sys.stderr)
+            sys.exit(2)
+
+        def _progress(done: int, total: int) -> None:
+            pct = (100.0 * done / total) if total else 100.0
+            print(f"\rflashing {done}/{total} bytes ({pct:.0f}%)",
+                  end="", file=sys.stderr, flush=True)
+
+        try:
+            result = flash_firmware(
+                args.port,
+                args.firmware,
+                baud=args.baud,
+                address=args.address,
+                confirm=bool(args.yes),
+                force=bool(args.force),
+                progress=_progress if args.firmware else None,
+            )
+            if args.firmware:
+                print("", file=sys.stderr)  # newline after the progress line
+        except FlashError as e:
+            print(json.dumps({"error": str(e), "code": "EFLASH"}), file=sys.stderr)
+            sys.exit(1)
+        print(json.dumps(result, indent=2))
+        return
 
     # Open serial connection
     try:
@@ -557,6 +613,8 @@ def main() -> None:
             result = worker.status()
         elif c == "info":
             result = worker.info()
+        elif c == "firmware":
+            result = worker.firmware()
         elif c == "set-voltage":
             worker.set_voltage(args.volts)
             result = worker.status()

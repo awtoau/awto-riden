@@ -1,7 +1,7 @@
 # Copilot Instructions — awto-riden
 
 > **Now CLI-first (see issue #7).** The primary interface is the direct CLI
-> `ttu_cli.py` (`python3 ttu_cli.py --port /dev/ttyUSB0 status`), which talks to
+> `awto_riden.py` (`python3 awto_riden.py --port /dev/ttyUSB0 status`), which talks to
 > `RidenWorker` over serial with no daemon. The **MCP server is parked** under
 > `mcp/` and is off the active path; the section below applies only if you
 > deliberately re-enable it.
@@ -133,7 +133,7 @@ Example: raw `V_OUT = 1200` with `v_multi = 100` → `12.00 V`.
 
 | File | Purpose |
 |---|---|
-| `ttu_cli.py` | **Primary interface** — direct-serial CLI (status, set, benchmark, discovery) |
+| `awto_riden.py` | **Primary interface** — direct-serial CLI (status, set, benchmark, discovery) |
 | `riden_daemon.py` | `RidenWorker` — high-level PSU API (waveform, status, logging, …) |
 | `riden_transport.py` | `SerialTransport` — raw Modbus RTU over pyserial (FC03/FC06/FC16) |
 | `riden_register.py` | Modbus register address constants |

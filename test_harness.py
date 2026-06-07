@@ -22,14 +22,23 @@ Run:
 from __future__ import annotations
 
 import os
+import struct
 import subprocess
 import sys
+import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
 
 from protocol import make_err, make_ok
 from riden_daemon import RidenWorker, discover_devices
 from riden_transport import SerialTransport
+from riden_flash import (
+    RidenBootloader,
+    flash_firmware,
+    model_from_filename,
+    FlashError,
+    SUPPORTED_MODELS,
+)
 
 # Repo root — used as cwd for the CLI subprocess test. Derived from this
 # file's location so a rename of the checkout dir can't stale it again.
@@ -265,7 +274,7 @@ class TestCLI(unittest.TestCase):
     def test_cli_help(self) -> None:
         """CLI --help exits 0 and prints usage."""
         result = subprocess.run(
-            [sys.executable, "ttu_cli.py", "--help"],
+            [sys.executable, "awto_riden.py", "--help"],
             capture_output=True,
             text=True,
             cwd=REPO_ROOT,
@@ -432,6 +441,167 @@ class TestDiscovery(unittest.TestCase):
             "errors", "timed_out", "max_scan_s", "scan_ms", "skipped",
         ):
             self.assertIn(key, result, f"discover_devices response missing {key}")
+
+
+# ---------------------------------------------------------------------------
+# Layer 6 — Bootloader firmware loader (riden_flash), mocked serial
+# ---------------------------------------------------------------------------
+
+class _FakeBootSerial:
+    """Simulates a Riden unit's serial bootloader protocol for tests.
+
+    Responds to each written command by queueing the bytes a real unit would
+    return, so RidenBootloader's write/read cycles behave end-to-end without
+    hardware.
+    """
+
+    def __init__(self, *, in_bootloader=False, model=60066, fw_raw=109,
+                 serial_num=1036, chunk_ack=b"OK", upfirm_ready=b"upredy"):
+        self._boot = in_bootloader
+        self._model = model
+        self._fw = fw_raw
+        self._sn = serial_num
+        self._chunk_ack = chunk_ack
+        self._upfirm = upfirm_ready
+        self._rx = bytearray()
+        self.timeout = None
+        self.written = bytearray()
+        self.closed = False
+
+    def _info_block(self) -> bytes:
+        b = bytearray(b"inf")
+        b += struct.pack("<I", self._sn)     # serial LE32 -> res[3..6]
+        b += struct.pack("<H", self._model)  # model  LE16 -> res[7..8]
+        b += b"\x00\x00"                       # pad         -> res[9..10]
+        b += bytes([self._fw])                 # fw          -> res[11]
+        b += b"\x00"                           # pad         -> res[12]
+        return bytes(b)
+
+    def write(self, data):
+        self.written += data
+        d = bytes(data)
+        if d == b"queryd\r\n":
+            self._rx += b"boot" if self._boot else b"\x00\x00\x00\x00"
+        elif d == b"getinf\r\n":
+            self._rx += self._info_block()
+        elif d == b"upfirm\r\n":
+            self._rx += self._upfirm
+        elif len(d) == 8 and d[1] == 0x06:     # Modbus FC06 reboot frame
+            self._rx += b"\xfc"
+            self._boot = True
+        else:                                   # firmware chunk
+            self._rx += self._chunk_ack
+        return len(data)
+
+    def read(self, n):
+        out = bytes(self._rx[:n])
+        del self._rx[:n]
+        return out
+
+    def close(self):
+        self.closed = True
+
+
+class TestFlash(unittest.TestCase):
+
+    def test_model_from_filename(self):
+        self.assertEqual(model_from_filename("RD60066_V1.09.bin"), 60066)
+        self.assertEqual(model_from_filename("/path/RD60062_V1.32.bin"), 60062)
+        self.assertIsNone(model_from_filename("random.bin"))
+
+    def test_in_bootloader_detection(self):
+        bl = RidenBootloader("MOCK")
+        bl._ser = _FakeBootSerial(in_bootloader=True)
+        self.assertTrue(bl.in_bootloader())
+        bl._ser = _FakeBootSerial(in_bootloader=False)
+        self.assertFalse(bl.in_bootloader())
+
+    def test_enter_bootloader_reboots_via_modbus(self):
+        fake = _FakeBootSerial(in_bootloader=False)
+        bl = RidenBootloader("MOCK", address=1)
+        bl._ser = fake
+        with patch("riden_flash.time.sleep"):     # skip the 3 s reboot settle
+            bl.enter_bootloader()
+        # A Modbus FC06 reboot frame (func 0x06) must have been written.
+        self.assertIn(b"\x06", bytes(fake.written))
+        self.assertTrue(fake._boot)
+
+    def test_info_parsing(self):
+        bl = RidenBootloader("MOCK")
+        bl._ser = _FakeBootSerial(model=60066, fw_raw=109, serial_num=1036)
+        info = bl.info()
+        self.assertEqual(info["model"], 60066)
+        self.assertEqual(info["fw"], "v1.09")
+        self.assertEqual(info["serial"], "00001036")
+        self.assertTrue(info["supported"])
+
+    def test_write_firmware_chunks_and_progress(self):
+        fake = _FakeBootSerial(in_bootloader=True)
+        bl = RidenBootloader("MOCK")
+        bl._ser = fake
+        firmware = bytes(range(150))            # 150 bytes -> 64 + 64 + 22
+        seen = []
+        bl.write_firmware(firmware, progress=lambda d, t: seen.append((d, t)))
+        self.assertIn(b"upfirm\r\n", bytes(fake.written))
+        self.assertEqual(seen[-1], (150, 150))  # final progress = full image
+        self.assertEqual(len(seen), 3)          # three chunks
+
+    def test_write_firmware_rejected_chunk_raises(self):
+        bl = RidenBootloader("MOCK")
+        bl._ser = _FakeBootSerial(in_bootloader=True, chunk_ack=b"XX")
+        with self.assertRaises(FlashError):
+            bl.write_firmware(b"\x00" * 64)
+
+    def test_flash_firmware_refuses_without_confirm(self):
+        with patch("serial.Serial", return_value=_FakeBootSerial(in_bootloader=True)), \
+             patch("riden_flash.time.sleep"):
+            with tempfile.NamedTemporaryFile(suffix="RD60066.bin", delete=False) as f:
+                f.write(b"\x00" * 64)
+                path = f.name
+            try:
+                with self.assertRaises(FlashError):
+                    flash_firmware("MOCK", path, confirm=False)
+            finally:
+                os.unlink(path)
+
+    def test_flash_firmware_model_mismatch_refused(self):
+        # device model 60066, but firmware filename says 60241 -> refuse
+        with patch("serial.Serial", return_value=_FakeBootSerial(model=60066, in_bootloader=True)), \
+             patch("riden_flash.time.sleep"):
+            d = tempfile.mkdtemp()
+            path = os.path.join(d, "RD60241_V1.39.bin")
+            with open(path, "wb") as fh:
+                fh.write(b"\x00" * 64)
+            try:
+                with self.assertRaises(FlashError):
+                    flash_firmware("MOCK", path, confirm=True)
+            finally:
+                os.unlink(path)
+                os.rmdir(d)
+
+    def test_flash_firmware_happy_path(self):
+        with patch("serial.Serial", return_value=_FakeBootSerial(model=60066, in_bootloader=True)), \
+             patch("riden_flash.time.sleep"):
+            d = tempfile.mkdtemp()
+            path = os.path.join(d, "RD60066_V1.10.bin")
+            with open(path, "wb") as fh:
+                fh.write(b"\xaa" * 130)
+            try:
+                result = flash_firmware("MOCK", path, confirm=True)
+            finally:
+                os.unlink(path)
+                os.rmdir(d)
+        self.assertTrue(result["flashed"])
+        self.assertEqual(result["bytes"], 130)
+        self.assertEqual(result["model"], 60066)
+
+    def test_flash_firmware_no_file_reboots_only(self):
+        with patch("serial.Serial", return_value=_FakeBootSerial(model=60066, in_bootloader=False)), \
+             patch("riden_flash.time.sleep"):
+            result = flash_firmware("MOCK", None)
+        self.assertFalse(result["flashed"])
+        self.assertIsNone(result["bytes"])
+        self.assertEqual(result["model"], 60066)
 
 
 if __name__ == "__main__":

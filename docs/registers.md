@@ -30,8 +30,8 @@ Recommended verification workflow (existing interfaces only):
 
 ```bash
 source .venv/bin/activate
-python3 ttu_cli.py --port /dev/ttyUSBX --baud 115200 --address 1 register-scan --start 0 --end 260 --batch 50 --report-only
-python3 ttu_cli.py --port /dev/ttyUSBX --baud 115200 --address 1 diff-scan --start 0 --end 260 --batch 50 --settle-ms 300 --unknown-only
+python3 awto_riden.py --port /dev/ttyUSBX --baud 115200 --address 1 register-scan --start 0 --end 260 --batch 50 --report-only
+python3 awto_riden.py --port /dev/ttyUSBX --baud 115200 --address 1 diff-scan --start 0 --end 260 --batch 50 --settle-ms 300 --unknown-only
 ```
 
 If a unit does not answer at address 1, retry with its configured Modbus address.

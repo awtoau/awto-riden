@@ -1,7 +1,7 @@
 """
 awto-riden RidenWorker — thread-safe wrapper for Riden RD60xx PSU control.
 
-Used by both the CLI (ttu_cli.py) and MCP server (mcp_server.py).
+Used by both the CLI (awto_riden.py) and MCP server (mcp_server.py).
 Each caller opens the serial port independently; Modbus serializes at protocol level.
 
 Transport: USB serial (/dev/ttyUSB0), Bluetooth serial (/dev/rfcomm0), or native BLE.

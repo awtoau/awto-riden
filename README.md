@@ -5,7 +5,7 @@ MCP server and CLI for RuiDeng/Riden RD60xx and RK6006 power supplies.
 This repository provides a direct serial control stack for AI agents and humans:
 
 - MCP tools (`rd_*`) for Copilot/Claude workflows
-- CLI (`ttu_cli.py`) for bench scripting
+- CLI (`awto_riden.py`) for bench scripting
 - Timing profiler to recommend stable poll cadence
 - Characterisation helpers (VI sweep, inrush capture, waveform output)
 
@@ -38,8 +38,8 @@ cd awto-mcp-riden
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e .
 
-python3 ttu_cli.py --port /dev/ttyUSB0 status
-python3 ttu_cli.py --port /dev/ttyUSB0 profile-serial --count 20 --sleep-ms 100
+python3 awto_riden.py --port /dev/ttyUSB0 status
+python3 awto_riden.py --port /dev/ttyUSB0 profile-serial --count 20 --sleep-ms 100
 ```
 
 ## Timing graphs (updated)
@@ -145,7 +145,7 @@ Bluetooth RFCOMM links can be compared directly.
 CLI:
 
 ```bash
-python3 ttu_cli.py --port /dev/ttyUSB0 profile-serial --count 20 --sleep-ms 100
+python3 awto_riden.py --port /dev/ttyUSB0 profile-serial --count 20 --sleep-ms 100
 ```
 
 MCP:
@@ -232,7 +232,7 @@ Main categories:
 ## CLI interface summary
 
 ```bash
-python3 ttu_cli.py --port /dev/ttyUSB0 [--baud 115200] [--address 1] <command>
+python3 awto_riden.py --port /dev/ttyUSB0 [--baud 115200] [--address 1] <command>
 ```
 
 Common commands:
@@ -252,7 +252,7 @@ Common commands:
 
 ```text
 Agent/CLI
-  -> mcp_server.py / ttu_cli.py
+  -> mcp_server.py / awto_riden.py
   -> riden_daemon.py (RidenWorker)
   -> riden_transport.py (pymodbus + raw serial fallback)
   -> Modbus RTU over USB or RFCOMM

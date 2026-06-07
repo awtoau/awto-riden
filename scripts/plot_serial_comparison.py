@@ -22,7 +22,7 @@ import numpy as np
 
 # ---------------------------------------------------------------------------
 # Reference data: RK6006 on /dev/ttyUSB0 USB-direct, 30 samples, 2026-05-02
-# Measured with: python3 ttu_cli.py --port /dev/ttyUSB0 profile-serial --count 30 --sleep-ms 150
+# Measured with: python3 awto_riden.py --port /dev/ttyUSB0 profile-serial --count 30 --sleep-ms 150
 # ---------------------------------------------------------------------------
 RK6006_REFERENCE = {
     "label": "RK6006\n(USB-direct, CH340)",

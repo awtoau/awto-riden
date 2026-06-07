@@ -111,7 +111,7 @@ same Modbus RTU FC03/FC06/FC16 frames (the framing helpers can be shared with
    path). Replace `<MAC>` with the actual paired device — none is paired today,
    see `BT_STATUS.md`:
    ```bash
-   python3 ttu_cli.py --port <MAC> status
+   python3 awto_riden.py --port <MAC> status
    ```
 
 2. Verify response matches the USB serial baseline (`--port /dev/ttyUSB0`)
@@ -148,7 +148,7 @@ python3 ble_discover.py
 # Update RK6006 GATT UUIDs in BleTransport (riden_transport.py)
 
 # Test directly via the CLI, passing the paired MAC as --port
-python3 ttu_cli.py --port <MAC> status
+python3 awto_riden.py --port <MAC> status
 ```
 
 ## References
