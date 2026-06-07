@@ -1,7 +1,7 @@
 # register_map.py — single source of truth for the Riden register map (rich).
 #
-# Addresses and names come from riden_register.Register (canonical, copied
-# verbatim from ShayBox/Riden). THIS module is the one place to maintain the
+# Addresses and names come from riden_register.Register (the canonical source).
+# THIS module is the one place to maintain the
 # human-facing map on top of that: per-register descriptions, the known/unknown
 # range classification, the command "magic" values, and the raw->engineering
 # multipliers. Both the dev analysis tool (awto-riden-dev.py) and the docs

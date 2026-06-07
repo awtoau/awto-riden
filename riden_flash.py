@@ -5,11 +5,10 @@
 # so this module owns its own serial port rather than going through
 # SerialTransport/RidenDevice (one owner, one port).
 #
-# LICENCE: MIT, same as the rest of this project. This is an INDEPENDENT
-# implementation of the publicly-documented bootloader protocol below; it copies
-# no third-party code. The protocol behaviour was cross-checked against the
-# (GPLv3) tjko/riden-flashtool and bdd/riden-flashtool projects — credited in
-# ATTRIBUTION.md as protocol references only.
+# LICENCE: AGPL-3.0-or-later, same as the rest of this project. This is an
+# independent implementation of the publicly-documented bootloader protocol
+# below; the protocol was cross-referenced from the riden-flashtool projects
+# (credited in ATTRIBUTION.md).
 #
 # Bootloader serial protocol (8N1, default 115200 baud):
 #   - b"queryd\r\n"   -> b"boot"   (4 bytes)  when already in bootloader mode

@@ -7,7 +7,7 @@ name = "awto-mcp-riden"
 version = "0.1.0"
 description = "MCP server for Riden RD60xx power supplies — Modbus RTU over USB/BT serial"
 readme = "README.md"
-license = { text = "MIT" }
+license = { text = "AGPL-3.0-or-later" }
 authors = [
     { name = "Dan", email = "dan@awto.au" },
     { name = "GitHub Copilot (Claude Sonnet 4.6)", role = "implementation" },

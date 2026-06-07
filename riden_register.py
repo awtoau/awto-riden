@@ -1,21 +1,13 @@
 # riden_register.py — Modbus register map for Riden RD60xx / RK60xx power supplies.
 #
-# Copied verbatim from ShayBox/Riden (MIT licence)
-# https://github.com/awto-au/riden  (our traceability fork)
-# https://github.com/ShayBox/Riden  (upstream origin)
-#
-# The register map was originally documented by Baldanos/rd6006 (Apache-2.0):
-# https://github.com/Baldanos/rd6006/blob/master/registers.md
-#
-# Additional sources:
-#   rssdev10/riden-flashtool (MIT) — reg 54 CAL_COMMIT magic, REBOOT_MAGIC:
-#   https://github.com/rssdev10/riden-flashtool
+# Register map cross-referenced from various sources — Baldanos/rd6006
+# registers.md (the community map), ShayBox/Riden, and riden-flashtool (the
+# calibration/reboot magic values). See ATTRIBUTION.md.
+#   https://github.com/Baldanos/rd6006/blob/master/registers.md
 #
 #   Live register scan (RD6024 fw109, 2026-05-03) — empirical observations
 #   for clusters 182-195 and 208-239:
 #   docs/data/register_scan_20260503-011913Z.json
-#
-# No functional changes from upstream. Attribution: see ATTRIBUTION.md.
 
 
 class Register:
