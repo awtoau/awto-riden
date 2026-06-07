@@ -519,7 +519,7 @@ def main() -> None:
         _scripts = str(_Path(__file__).resolve().parent / "scripts")
         if _scripts not in _sys.path:
             _sys.path.insert(0, _scripts)
-        from plot_waveforms import plot_jsonl
+        from awto_riden_plot_waveforms import plot_jsonl
         saved = []
         for _f in args.files:
             _out = plot_jsonl(_f, args.out if len(args.files) == 1 else None)

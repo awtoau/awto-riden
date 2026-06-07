@@ -38,15 +38,15 @@ sys.path.insert(0, REPO_ROOT)
 UNIMPLEMENTED = 0xFFFF  # registers that read all-ones are treated as not-present
 
 PLOT_SCRIPTS = {
-    "waveforms": "plot_waveforms.py",
-    "serial": "plot_serial_comparison.py",
-    "ble": "plot_ble_globe.py",
+    "waveforms": "awto_riden_plot_waveforms.py",
+    "serial": "awto_riden_plot_serial.py",
+    "ble": "awto_riden_plot_ble.py",
 }
 BLE_SCRIPTS = {
-    "profile": "ble_profile.py",
-    "globe": "ble_globe_turnon.py",
+    "profile": "awto_riden_ble_profile.py",
+    "globe": "awto_riden_ble_globe.py",
 }
-REPORT_SCRIPT = "report_pages.py"
+REPORT_SCRIPT = "awto_riden_report.py"
 
 
 def _delegate(script: str, passthrough: list[str], optional: bool = False) -> int:
@@ -102,7 +102,7 @@ def gen_docs(registers_only: bool) -> int:
         return 0
     # Waveform figures: regenerate PNGs from existing JSONL (best-effort; needs no PSU).
     print("regenerating waveform figures (best-effort)...", file=sys.stderr)
-    _delegate("regen_waveforms.py", [], optional=True)
+    _delegate("awto_riden_regen.py", [], optional=True)
     return 0
 
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # awto-riden-test.py — master HARDWARE test + characterization runner for Riden PSUs.
 #
-# Chains named test STAGES. Safety model (same contract as output_test.py):
+# Chains named test STAGES. Safety model (same safe-state contract):
 #   * Every stage runs on its OWN fresh RidenWorker connection (reconnect per stage).
 #   * A SEPARATE second-stage connection drives the PSU to a safe state
 #     (0.0 V / 0.0 A / output OFF) after every stage, at the very end, and from a

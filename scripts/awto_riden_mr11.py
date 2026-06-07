@@ -15,7 +15,7 @@ and run this script before Copilot Chat reconnects.  The script will exit with
 a clear error if the port is busy.
 
 Usage:
-    python3 scripts/led_mr11_test.py [--port /dev/ttyUSB0] [--voltage 12]
+    python3 scripts/awto_riden_mr11.py [--port /dev/ttyUSB0] [--voltage 12]
                                      [--max-current 6] [--out-dir /tmp]
                                      [--skip-inrush] [--skip-vsweep]
 """

@@ -6,7 +6,7 @@ sends repeated Modbus RTU reads, measures round-trip latency, and
 prints the same JSON structure as profile-serial for easy comparison.
 
 Usage:
-    python3 scripts/ble_profile.py [--mac AA:BB:CC:DD:EE:FF] [--count 30] [--sleep-ms 200]
+    python3 scripts/awto_riden_ble_profile.py [--mac AA:BB:CC:DD:EE:FF] [--count 30] [--sleep-ms 200]
 """
 from __future__ import annotations
 

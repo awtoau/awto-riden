@@ -38,7 +38,7 @@ removed so auto-detect is always used.
 - Baud: 115200, Modbus address: 1
 - RTT: ~93 ms on ttyUSB1 (latency timer reduced). Recommended poll interval: 120 ms.
 - To check: `ls /dev/ttyUSB* /dev/ttyACM* /dev/rfcomm* 2>/dev/null`
-- To quick-test the transport: `python3 scripts/transport_test.py`
+- To quick-test the transport: `python3 scripts/awto-riden-test.py --chain status`
 
 ---
 
@@ -141,7 +141,7 @@ Example: raw `V_OUT = 1200` with `v_multi = 100` → `12.00 V`.
 | `mcp/mcp_server.py` | MCP server — FastMCP tools, PSU registry (**parked**, see #7) |
 | `mcp/mcp.json` | VS Code MCP launch config (**parked** — copy to `.vscode/` to enable) |
 | `mcp/mcp_restart.sh` | Kill stale MCP server process before VS Code restart (**parked**) |
-| `scripts/transport_test.py` | Quick serial sanity check — reads status, no PSU changes |
+| `scripts/awto-riden-test.py --chain status` | Quick serial sanity check — reads status, no PSU changes |
 
 ---
 
@@ -152,11 +152,11 @@ Example: raw `V_OUT = 1200` with `v_multi = 100` → `12.00 V`.
 source .venv/bin/activate
 
 # Quick transport sanity check
-python3 scripts/transport_test.py
+python3 scripts/awto-riden-test.py --chain status
 
 # Kill stale MCP server (then restart from VS Code MCP panel)
 bash mcp/mcp_restart.sh
 
 # Profile serial timing
-python3 scripts/transport_test.py --port /dev/ttyUSB1
+python3 scripts/awto-riden-test.py --chain status --port /dev/ttyUSB1
 ```

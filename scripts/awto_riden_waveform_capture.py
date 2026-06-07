@@ -21,7 +21,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from riden_daemon import RidenDevice
 from riden_transport import SerialTransport
-from report_pages import copy_artifact, normalize_device_slug, update_reports_index, utc_run_stamp, write_manifest
+from awto_riden_report import copy_artifact, normalize_device_slug, update_reports_index, utc_run_stamp, write_manifest
 
 
 REG_VOUT = 10
@@ -209,7 +209,7 @@ def _write_waveform_report(
         report_path=report_path,
         artifacts=[report_path, *copied],
         extra={
-            "script": "scripts/waveform_capture.py",
+            "script": "scripts/awto_riden_waveform_capture.py",
             "device_slug": device_slug,
         },
     )

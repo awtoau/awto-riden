@@ -1,10 +1,10 @@
-"""raw_serial_read.py — bypass modbus-tk entirely, talk raw bytes to the PSU.
+"""awto_riden_raw_read.py — bypass modbus-tk entirely, talk raw bytes to the PSU.
 
 Sends a Modbus RTU FC03 read-holding-registers request manually,
 reads the raw response, verifies CRC, and decodes register values.
 
 Usage:
-    python3 scripts/raw_serial_read.py [/dev/ttyUSB0]
+    python3 scripts/awto_riden_raw_read.py [/dev/ttyUSB0]
 """
 import struct
 import sys

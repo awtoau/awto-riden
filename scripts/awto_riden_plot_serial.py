@@ -2,7 +2,7 @@
 """Plot serial RTT comparison: RK6006 (USB-direct) vs RD6024 (RS485 dongle).
 
 Usage:
-    python3 scripts/plot_serial_comparison.py [--port /dev/ttyUSB1] [--count 30] [--out docs/data/serial_rtt_comparison.png]
+    python3 scripts/awto_riden_plot_serial.py [--port /dev/ttyUSB1] [--count 30] [--out docs/data/serial_rtt_comparison.png]
 
 Collects live RTT samples from the RD6024 on --port, then plots them
 side-by-side with the reference RK6006 USB-serial data captured on 2026-05-02.

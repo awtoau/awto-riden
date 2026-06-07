@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""timing_test_set.py
+"""awto_riden_timing.py
 
 One-command regeneration for connected-load timing test suites.
 
@@ -10,7 +10,7 @@ What this does:
 
 Example:
   source .venv/bin/activate
-  python3 scripts/timing_test_set.py \
+  python3 scripts/awto_riden_timing.py \
     --port /dev/ttyUSB0 \
     --voltage 12 --current 1.5 \
     --mode both
@@ -30,7 +30,7 @@ import matplotlib.pyplot as plt
 
 
 ROOT = Path(__file__).resolve().parents[1]
-MATRIX_SCRIPT = ROOT / "scripts" / "connected_load_timing_matrix.py"
+MATRIX_SCRIPT = ROOT / "scripts" / "awto_riden_timing_matrix.py"
 
 
 def _read_json(path: Path) -> dict:

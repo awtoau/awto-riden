@@ -11,7 +11,7 @@ Output JSONL (one JSON object per line):
    "rtt_ms": <measured BLE RTT for this sample>}
 
 Usage:
-    python3 scripts/ble_globe_turnon.py [--mac AA:BB:CC:DD:EE:FF]
+    python3 scripts/awto_riden_ble_globe.py [--mac AA:BB:CC:DD:EE:FF]
         [--v-set 14.0] [--i-limit 6.0] [--duration 6] [--interval-ms 80]
         [--out docs/data/globe_turnon_14v_ble80ms.jsonl]
 """
