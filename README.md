@@ -280,6 +280,12 @@ scripts/awto-riden-dev.py gen-docs            # docs/registers.md (+ waveform fi
 `docs/registers.md` carries a "GENERATED — do not edit by hand" header; edit
 `register_map.py` and re-run `gen-docs` instead.
 
+**See [docs/REGENERATING.md](docs/REGENERATING.md)** for the full runbook: what's
+generated vs source, the **capture → `.jsonl` fixture → regenerate** loop (figures
+rebuild offline from committed data — no load needed), and the fixture list. The
+figures *do* need an appropriate reactive load to **capture** (globe inrush, MR11,
+motor); once the `.jsonl` is committed, regeneration needs no hardware.
+
 ## Architecture
 
 ```text
