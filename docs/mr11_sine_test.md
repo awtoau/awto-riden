@@ -105,7 +105,7 @@ This page should be read as a timing behavior report, not a deterministic per-sa
 Waveform captures and plots:
 
 ```bash
-python3 scripts/waveform_capture.py \
+python3 scripts/awto_riden_waveform_capture.py \
   --port /dev/ttyUSB0 \
   --out-dir docs \
   --freq-hz 0.5 \
@@ -115,13 +115,13 @@ python3 scripts/waveform_capture.py \
   --i-limit-normal 1.5 \
   --i-limit-clipped 0.2
 
-python3 scripts/plot_waveforms.py
+python3 scripts/awto_riden_plot_waveforms.py
 ```
 
 Fastest run:
 
 ```bash
-python3 scripts/connected_load_timing_matrix.py \
+python3 scripts/awto_riden_timing_matrix.py \
   --port /dev/ttyUSB0 \
   --voltage 12 --current 1.5 \
   --poll-ms 0 \
@@ -134,7 +134,7 @@ python3 scripts/connected_load_timing_matrix.py \
 Safe cadence run:
 
 ```bash
-python3 scripts/connected_load_timing_matrix.py \
+python3 scripts/awto_riden_timing_matrix.py \
   --port /dev/ttyUSB0 \
   --voltage 12 --current 1.5 \
   --poll-ms 180 \
@@ -147,7 +147,7 @@ python3 scripts/connected_load_timing_matrix.py \
 Comprehensive run:
 
 ```bash
-python3 scripts/connected_load_timing_matrix.py \
+python3 scripts/awto_riden_timing_matrix.py \
   --port /dev/ttyUSB0 \
   --voltage 12 --current 1.5 \
   --poll-ms 0,20,50,100,150,180,200 \
@@ -162,7 +162,7 @@ python3 scripts/connected_load_timing_matrix.py \
 Run the larger connected-load matrix before final cadence recommendations:
 
 ```bash
-python3 scripts/connected_load_timing_matrix.py \
+python3 scripts/awto_riden_timing_matrix.py \
   --port /dev/ttyUSB0 \
   --voltage 12 --current 1.5 \
   --poll-ms 0,20,50,100,150,200 \

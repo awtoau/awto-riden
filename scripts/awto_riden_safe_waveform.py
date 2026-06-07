@@ -16,7 +16,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-# Allow running as: python3 scripts/safe_waveform_test.py from any cwd.
+# Allow running as: python3 scripts/awto_riden_safe_waveform.py from any cwd.
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))

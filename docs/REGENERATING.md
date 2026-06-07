@@ -17,8 +17,8 @@ story so you never have to re-figure it out.
 | Generated artifact | Source of truth | Rebuilt by |
 |---|---|---|
 | `docs/registers.md` | **`register_map.py`** (names from `riden_register.py` + descriptions/ranges/magic) | `awto-riden-dev.py gen-docs` |
-| `docs/data/*.png` (waveform/inrush/characterisation figures) | **`docs/data/*.jsonl`** capture fixtures | `awto-riden-dev.py gen-docs` → `regen_waveforms.py` |
-| Timing figures (`*timing*`, `*rtt*`) | `docs/data/*timing*.json` | `awto-riden-dev.py plot ...` / `timing_test_set.py --analyze-only` |
+| `docs/data/*.png` (waveform/inrush/characterisation figures) | **`docs/data/*.jsonl`** capture fixtures | `awto-riden-dev.py gen-docs` → `awto_riden_regen.py` |
+| Timing figures (`*timing*`, `*rtt*`) | `docs/data/*timing*.json` | `awto-riden-dev.py plot ...` / `awto_riden_timing.py --analyze-only` |
 
 The figure regeneration is **offline** — it reads the committed `.jsonl`/`.json`
 data and re-renders the PNGs. **No PSU, no load, no hardware required.** (Verified:
@@ -43,9 +43,9 @@ the recorded values live in a committed `.jsonl` fixture, and **anyone can
 regenerate the figure without the load**.
 
 1. **Capture** against real hardware with the load connected, e.g.:
-   - `scripts/waveform_capture.py` — sine/triangle/sawtooth/square + clipping runs
-   - `scripts/led_mr11_test.py` — MR11 inrush + V/I characteristic
-   - `scripts/ble_globe_turnon.py` — globe turn-on over BLE
+   - `scripts/awto_riden_waveform_capture.py` — sine/triangle/sawtooth/square + clipping runs
+   - `scripts/awto_riden_mr11.py` — MR11 inrush + V/I characteristic
+   - `scripts/awto_riden_ble_globe.py` — globe turn-on over BLE
    Each writes a `.jsonl` of timestamped V/I samples into `docs/data/`.
 2. **Commit the `.jsonl`** — that file *is* the recorded dataset.
 3. **`gen-docs`** re-renders the PNG from it. Done — no hardware needed again.

@@ -2,7 +2,7 @@
 """Multi-panel BLE vs USB globe turn-on comparison + BLE latency analysis.
 
 Usage:
-    python3 scripts/plot_ble_globe.py [--out docs/data/globe_ble_comparison.png]
+    python3 scripts/awto_riden_plot_ble.py [--out docs/data/globe_ble_comparison.png]
 
 Panels:
   1. V_out & I_out — BLE (cold, ~113 ms) vs USB-serial (warm/threshold-filtered)

@@ -3,14 +3,14 @@
 
 Usage
 -----
-    python3 scripts/regen_waveforms.py [--docs-dir docs]
+    python3 scripts/awto_riden_regen.py [--docs-dir docs]
 
 Exits 0 if every expected PNG was created, 1 otherwise.
 
 No PSU connection is needed — this works entirely from pre-captured JSONL data.
 To re-capture from hardware first, run::
 
-    python3 scripts/waveform_capture.py --port /dev/ttyUSB0 [capture args...]
+    python3 scripts/awto_riden_waveform_capture.py --port /dev/ttyUSB0 [capture args...]
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ if str(REPO_ROOT / "scripts") not in sys.path:
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from plot_waveforms import load, main as _combo_main, plot_jsonl, _descriptive_png_name, _detect_plot_type
+from awto_riden_plot_waveforms import load, main as _combo_main, plot_jsonl, _descriptive_png_name, _detect_plot_type
 
 # ---------------------------------------------------------------------------
 # Expected JSONL inputs (relative to docs_dir)

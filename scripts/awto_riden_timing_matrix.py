@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""connected_load_timing_matrix.py
+"""awto_riden_timing_matrix.py
 
 Run a repeatable timing matrix against a REAL connected load while output is ON.
 
@@ -10,7 +10,7 @@ Goal:
 
 Example:
   source .venv/bin/activate
-  python3 scripts/connected_load_timing_matrix.py \
+  python3 scripts/awto_riden_timing_matrix.py \
       --port /dev/ttyUSB0 --voltage 12 --current 1.5 \
       --poll-ms 20,50,100,150,200 --samples 120 --settle-s 3
 
@@ -34,7 +34,7 @@ import matplotlib.pyplot as plt
 # Local import (repo root)
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from riden_daemon import RidenWorker
-from report_pages import normalize_device_slug, update_reports_index, utc_run_stamp, write_manifest
+from awto_riden_report import normalize_device_slug, update_reports_index, utc_run_stamp, write_manifest
 
 
 def _percentile(sorted_vals: list[float], p: float) -> float:
@@ -286,7 +286,7 @@ def _write_timing_report(
         report_path=report_path,
         artifacts=[report_path, dst_json, dst_rtt, dst_timeout],
         extra={
-            "script": "scripts/connected_load_timing_matrix.py",
+            "script": "scripts/awto_riden_timing_matrix.py",
             "device_slug": device_slug,
             "source_output_prefix": str(out_prefix),
         },
