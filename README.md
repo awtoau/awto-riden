@@ -300,7 +300,7 @@ register_map.py        single source of truth for the Modbus register map
 protocol.py            shared constants / JSON-lines helpers
 riden_daemon.py        RidenWorker + RidenDevice + discover_devices
 riden_transport.py     SerialTransport (Modbus RTU) + vendored discover() loader
-riden_register.py      canonical register constants (verbatim upstream)
+riden_register.py      canonical register constants
 riden_flash.py         bootloader firmware loader (MIT reimplementation)
 test_harness.py        unittest suite (no hardware required)
 mcp/                   MCP stdio server (mcp_server.py) + .vscode wiring
@@ -330,6 +330,13 @@ Agent/CLI
 - Disable output before large voltage jumps.
 - Treat CC at turn-on as expected inrush behavior unless persistent.
 - Use `rd_all_off` for emergency multi-PSU shutdown.
+
+## License
+
+**AGPL-3.0-or-later** (see `LICENSE`), with a **commercial dual-license**
+available for proprietary / closed-source use — see [COMMERCIAL.md](COMMERCIAL.md).
+Copyright © awto.au. The code is original; see [ATTRIBUTION.md](ATTRIBUTION.md)
+for the community references it was built against.
 
 ## Related projects
 

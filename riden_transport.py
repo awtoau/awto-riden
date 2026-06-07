@@ -10,10 +10,8 @@
 #   TcpTransport     — Modbus TCP or pyserial socket:// URL (WiFi bridge)
 #   BleTransport     — Bleak BLE (RK6006-BT native BLE)
 #
-# Register-level protocol derived from:
-#   Baldanos/rd6006 (Apache-2.0)  https://github.com/Baldanos/rd6006
-#   ShayBox/Riden   (MIT)         https://github.com/awto-au/riden
-# See ATTRIBUTION.md for full lineage.
+# Register/protocol referenced from various sources (Baldanos/rd6006,
+# ShayBox/Riden). Original code, AGPL-3.0-or-later. See ATTRIBUTION.md.
 
 from __future__ import annotations
 
@@ -274,7 +272,7 @@ def list_serial_ports() -> list[dict]:
 
 # ---------------------------------------------------------------------------
 # Model detection helpers
-# (extracted from ShayBox/Riden Riden.__init__ — MIT licence)
+# (model-id ranges referenced from ShayBox/Riden)
 # ---------------------------------------------------------------------------
 
 def _model_info(device_id: int) -> dict:
