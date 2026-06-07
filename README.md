@@ -221,6 +221,12 @@ Recommended minimums:
 
 ## MCP interface summary
 
+The server (`mcp/mcp_server.py`) is wired into VS Code via `.vscode/mcp.json` and
+auto-discovers connected PSUs at startup (registered disconnected until you
+approve them with `rd_connect`). Verified end-to-end against a live RK6006 (all
+33 `rd_*` tools register; a hardware-free registration test lives in
+`test_harness.py::TestMcp`).
+
 Main categories:
 
 - status/identity: `rd_status`, `rd_firmware`, `rd_capabilities`, `rd_profile_serial`

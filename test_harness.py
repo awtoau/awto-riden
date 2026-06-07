@@ -21,6 +21,7 @@ Run:
 
 from __future__ import annotations
 
+import asyncio
 import os
 import struct
 import subprocess
@@ -602,6 +603,31 @@ class TestFlash(unittest.TestCase):
         self.assertFalse(result["flashed"])
         self.assertIsNone(result["bytes"])
         self.assertEqual(result["model"], 60066)
+
+
+# ---------------------------------------------------------------------------
+# Layer 7 — MCP server (tool registration, no hardware)
+# ---------------------------------------------------------------------------
+
+class TestMcp(unittest.TestCase):
+    """Import the MCP server and confirm its FastMCP tool surface registers.
+
+    Importing the module runs the @mcp.tool() decorators (registering the tools)
+    but never calls main(), so no serial port is opened — hardware-free.
+    """
+
+    def test_tools_register(self):
+        sys.path.insert(0, os.path.join(REPO_ROOT, "mcp"))
+        try:
+            import mcp_server  # noqa: PLC0415 — module load registers the tools
+        except Exception as exc:  # mcp SDK / colorlog not installed, etc.
+            self.skipTest(f"MCP server not importable: {exc}")
+
+        tools = asyncio.run(mcp_server.mcp.list_tools())
+        names = {t.name for t in tools}
+        for tool in ("rd_status", "rd_discover_devices", "rd_firmware",
+                     "rd_set_voltage", "rd_list_psus", "rd_connect", "rd_all_off"):
+            self.assertIn(tool, names, f"MCP tool {tool} not registered")
 
 
 if __name__ == "__main__":
