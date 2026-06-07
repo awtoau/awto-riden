@@ -1,63 +1,29 @@
 # Riden RD60xx/RK60xx Register Map
 
-This page documents the register map currently used by this repo and tracks known vs unknown regions.
+> **GENERATED FILE — do not edit by hand.**
+> Regenerate with: `scripts/awto-riden-dev.py gen-docs`
+> Single source of truth: `register_map.py` (built on `riden_register.py`).
 
-Canonical code source:
-- `riden_register.py`
-
-Additional attribution and evidence:
-- Baldanos/rd6006 register map
-- ShayBox/Riden constants
-- rssdev10/riden-flashtool (CAL_COMMIT, reboot magic)
-- Live scan evidence: `docs/data/register_scan_20260503-011913Z.json`
-
-## Device/Firmware compatibility notes
-
-Do not assume every register/range is identical across RD and RK firmware.
-
-Observed in this repo:
-
-| Device | Firmware | Evidence | Notes |
-|---|---|---|---|
-| RD6024 (id 60241) | v1.39 (`fw_raw=139`) | MCP `rd_firmware`, `rd_status`, `rd_register_scan` on `/dev/ttyUSB1` | Extended bank and empirical clusters are verified on this target. |
-| RK6006 (id 60066) | v1.09 (`fw=109`) | Existing report artifacts under `docs/reports/rk6006-id60066-fw109/` | RK firmware may differ; treat RD6024-only empirical ranges as non-portable until scanned on RK. |
-
-Practical rule:
-- Registers in the upstream/common map (`0..119`, `256`) are generally reliable cross-model.
-- Empirical ranges (`182..195`, `208..239`) should be treated as firmware-specific until re-verified per device.
-
-Recommended verification workflow (existing interfaces only):
-
-```bash
-source .venv/bin/activate
-python3 awto_riden.py --port /dev/ttyUSBX --baud 115200 --address 1 register-scan --start 0 --end 260 --batch 50 --report-only
-python3 awto_riden.py --port /dev/ttyUSBX --baud 115200 --address 1 diff-scan --start 0 --end 260 --batch 50 --settle-ms 300 --unknown-only
-```
-
-If a unit does not answer at address 1, retry with its configured Modbus address.
-
-## Address-space coverage
-
-This project accounts for addresses `0..256` as follows.
+## Address-space coverage (0–256)
 
 | Range | Status | Notes |
 |---|---|---|
-| 0-20 | Known | Core identity, measurements, output state |
-| 21-31 | Unknown | Reserved/undocumented |
-| 32-41 | Known | Battery/temp/energy counters |
-| 42-47 | Unknown | Reserved/undocumented |
-| 48-53 | Known | RTC date/time |
+| 0–20 | Known | Core identity, measurements, output state |
+| 21–31 | Unknown | Reserved/undocumented |
+| 32–41 | Known | Battery/temp/energy counters |
+| 42–47 | Unknown | Reserved/undocumented |
+| 48–53 | Known | RTC date/time |
 | 54 | Known | Calibration commit register |
-| 55-62 | Known | Calibration trim registers |
-| 63-65 | Unknown | Reserved/undocumented |
-| 66-72 | Known | UI/options |
-| 73-79 | Unknown | Reserved/undocumented |
-| 80-119 | Known | Presets M0-M9 |
-| 120-181 | Unknown | Reserved/undocumented |
-| 182-195 | Empirical | Metadata/calibration mirror cluster on RD6024 fw109 |
-| 196-207 | Unknown | Reserved/undocumented |
-| 208-239 | Empirical | Extended presets M10-M17 (V/I/OVP/OCP) |
-| 240-255 | Unknown | Reserved/undocumented |
+| 55–62 | Known | Calibration trim registers |
+| 63–65 | Unknown | Reserved/undocumented |
+| 66–72 | Known | UI/options |
+| 73–79 | Unknown | Reserved/undocumented |
+| 80–119 | Known | Presets M0-M9 |
+| 120–181 | Unknown | Reserved/undocumented |
+| 182–195 | Empirical | Metadata/calibration mirror cluster on RD6024 fw109 |
+| 196–207 | Unknown | Reserved/undocumented |
+| 208–239 | Empirical | Extended presets M10-M17 (V/I/OVP/OCP) |
+| 240–255 | Unknown | Reserved/undocumented |
 | 256 | Known | System control (bootloader trigger) |
 
 ## Register details
@@ -101,7 +67,7 @@ This project accounts for addresses `0..256` as follows.
 | 51 | HOUR | RTC hour |
 | 52 | MINUTE | RTC minute |
 | 53 | SECOND | RTC second |
-| 54 | CAL_COMMIT | Write `0x1501` to commit calibration |
+| 54 | CAL_COMMIT | Write 0x1501 to commit calibration |
 | 55 | V_OUT_ZERO | Target voltage offset trim (DAC) |
 | 56 | V_OUT_SCALE | Target voltage scale trim (DAC) |
 | 57 | V_BACK_ZERO | Display voltage offset trim (ADC) |
@@ -117,48 +83,103 @@ This project accounts for addresses `0..256` as follows.
 | 70 | OPT_LOGO | Option: startup logo |
 | 71 | OPT_LANG | Option: language |
 | 72 | OPT_LIGHT | Option: display brightness |
-| 80-83 | M0_V..M0_OCP | Preset bank M0 |
-| 84-87 | M1_V..M1_OCP | Preset bank M1 |
-| 88-91 | M2_V..M2_OCP | Preset bank M2 |
-| 92-95 | M3_V..M3_OCP | Preset bank M3 |
-| 96-99 | M4_V..M4_OCP | Preset bank M4 |
-| 100-103 | M5_V..M5_OCP | Preset bank M5 |
-| 104-107 | M6_V..M6_OCP | Preset bank M6 |
-| 108-111 | M7_V..M7_OCP | Preset bank M7 |
-| 112-115 | M8_V..M8_OCP | Preset bank M8 |
-| 116-119 | M9_V..M9_OCP | Preset bank M9 |
-| 208-211 | M10_V..M10_OCP | Extended preset bank M10 (empirical) |
-| 212-215 | M11_V..M11_OCP | Extended preset bank M11 (empirical) |
-| 216-219 | M12_V..M12_OCP | Extended preset bank M12 (empirical) |
-| 220-223 | M13_V..M13_OCP | Extended preset bank M13 (empirical) |
-| 224-227 | M14_V..M14_OCP | Extended preset bank M14 (empirical) |
-| 228-231 | M15_V..M15_OCP | Extended preset bank M15 (empirical) |
-| 232-235 | M16_V..M16_OCP | Extended preset bank M16 (empirical) |
-| 236-239 | M17_V..M17_OCP | Extended preset bank M17 (empirical) |
-| 256 | SYSTEM | System control; write `0x1601` to enter bootloader |
+| 80 | M0_V | Preset M0 voltage setpoint |
+| 81 | M0_I | Preset M0 current setpoint |
+| 82 | M0_OVP | Preset M0 OVP threshold |
+| 83 | M0_OCP | Preset M0 OCP threshold |
+| 84 | M1_V | Preset M1 voltage setpoint |
+| 85 | M1_I | Preset M1 current setpoint |
+| 86 | M1_OVP | Preset M1 OVP threshold |
+| 87 | M1_OCP | Preset M1 OCP threshold |
+| 88 | M2_V | Preset M2 voltage setpoint |
+| 89 | M2_I | Preset M2 current setpoint |
+| 90 | M2_OVP | Preset M2 OVP threshold |
+| 91 | M2_OCP | Preset M2 OCP threshold |
+| 92 | M3_V | Preset M3 voltage setpoint |
+| 93 | M3_I | Preset M3 current setpoint |
+| 94 | M3_OVP | Preset M3 OVP threshold |
+| 95 | M3_OCP | Preset M3 OCP threshold |
+| 96 | M4_V | Preset M4 voltage setpoint |
+| 97 | M4_I | Preset M4 current setpoint |
+| 98 | M4_OVP | Preset M4 OVP threshold |
+| 99 | M4_OCP | Preset M4 OCP threshold |
+| 100 | M5_V | Preset M5 voltage setpoint |
+| 101 | M5_I | Preset M5 current setpoint |
+| 102 | M5_OVP | Preset M5 OVP threshold |
+| 103 | M5_OCP | Preset M5 OCP threshold |
+| 104 | M6_V | Preset M6 voltage setpoint |
+| 105 | M6_I | Preset M6 current setpoint |
+| 106 | M6_OVP | Preset M6 OVP threshold |
+| 107 | M6_OCP | Preset M6 OCP threshold |
+| 108 | M7_V | Preset M7 voltage setpoint |
+| 109 | M7_I | Preset M7 current setpoint |
+| 110 | M7_OVP | Preset M7 OVP threshold |
+| 111 | M7_OCP | Preset M7 OCP threshold |
+| 112 | M8_V | Preset M8 voltage setpoint |
+| 113 | M8_I | Preset M8 current setpoint |
+| 114 | M8_OVP | Preset M8 OVP threshold |
+| 115 | M8_OCP | Preset M8 OCP threshold |
+| 116 | M9_V | Preset M9 voltage setpoint |
+| 117 | M9_I | Preset M9 current setpoint |
+| 118 | M9_OVP | Preset M9 OVP threshold |
+| 119 | M9_OCP | Preset M9 OCP threshold |
+| 208 | M10_V | Preset M10 voltage setpoint |
+| 209 | M10_I | Preset M10 current setpoint |
+| 210 | M10_OVP | Preset M10 OVP threshold |
+| 211 | M10_OCP | Preset M10 OCP threshold |
+| 212 | M11_V | Preset M11 voltage setpoint |
+| 213 | M11_I | Preset M11 current setpoint |
+| 214 | M11_OVP | Preset M11 OVP threshold |
+| 215 | M11_OCP | Preset M11 OCP threshold |
+| 216 | M12_V | Preset M12 voltage setpoint |
+| 217 | M12_I | Preset M12 current setpoint |
+| 218 | M12_OVP | Preset M12 OVP threshold |
+| 219 | M12_OCP | Preset M12 OCP threshold |
+| 220 | M13_V | Preset M13 voltage setpoint |
+| 221 | M13_I | Preset M13 current setpoint |
+| 222 | M13_OVP | Preset M13 OVP threshold |
+| 223 | M13_OCP | Preset M13 OCP threshold |
+| 224 | M14_V | Preset M14 voltage setpoint |
+| 225 | M14_I | Preset M14 current setpoint |
+| 226 | M14_OVP | Preset M14 OVP threshold |
+| 227 | M14_OCP | Preset M14 OCP threshold |
+| 228 | M15_V | Preset M15 voltage setpoint |
+| 229 | M15_I | Preset M15 current setpoint |
+| 230 | M15_OVP | Preset M15 OVP threshold |
+| 231 | M15_OCP | Preset M15 OCP threshold |
+| 232 | M16_V | Preset M16 voltage setpoint |
+| 233 | M16_I | Preset M16 current setpoint |
+| 234 | M16_OVP | Preset M16 OVP threshold |
+| 235 | M16_OCP | Preset M16 OCP threshold |
+| 236 | M17_V | Preset M17 voltage setpoint |
+| 237 | M17_I | Preset M17 current setpoint |
+| 238 | M17_OVP | Preset M17 OVP threshold |
+| 239 | M17_OCP | Preset M17 OCP threshold |
+| 256 | SYSTEM | System control; write 0x1601 to enter bootloader |
 
-## Magic values
+## Magic command values
 
-| Value | Use |
-|---|---|
-| `0x1501` (5377) | Write to `CAL_COMMIT` (54) to persist calibration |
-| `0x1601` (5633) | Write to `SYSTEM` (256) to enter bootloader |
+| Value | Name | Use |
+|---|---|---|
+| `0x1501` (5377) | CAL_COMMIT_MAGIC | Write to `CAL_COMMIT` (54) to persist calibration |
+| `0x1601` (5633) | REBOOT_MAGIC | Write to `SYSTEM` (256) to enter bootloader |
 
-## Raw-to-engineering multipliers
+## Raw → engineering multipliers
 
-Scaling depends on model family.
-
-| Model family | V multiplier | I multiplier | P multiplier |
-|---|---:|---:|---:|
+| Model family | V | I | P |
+|---|--:|--:|--:|
 | RD6006 / RK6006 | 100 | 1000 | 100 |
 | RD6006P | 1000 | 10000 | 1000 |
 | RD6012 / RD6018 / RD6024 | 100 | 100 | 100 |
 
-Example:
-- Raw `V_OUT = 1200` with `V multiplier = 100` means `12.00 V`.
+e.g. raw `V_OUT = 1200` × (1/100) = **12.00 V**.
 
-## Notes
+## Evidence
 
-- `182-195` and `208-239` are based on empirical scans on RD6024 fw109 and should be treated as validated for that target, not universally guaranteed across all firmware.
-- Unknown ranges are intentionally listed to keep reverse-engineering scope explicit.
-- RK6006 uses different firmware lineage from RD6024 and may not expose all empirical RD ranges with identical semantics.
+- **RK6006 (id 60066, fw v1.09):** full read scan (0–260) shows the documented
+  map plus addrs **120–207 reading `0xFFFF` (unimplemented)** and **zero**
+  undocumented live registers. The RD6024 empirical banks (182–239) are NOT
+  present on RK firmware.
+- Sources: `riden_register.py`, Baldanos/rd6006, ShayBox/Riden,
+  rssdev10/tjko riden-flashtool (magic values). See `ATTRIBUTION.md`.
+

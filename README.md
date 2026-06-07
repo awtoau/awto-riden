@@ -247,6 +247,38 @@ Common commands:
 - `set-ocp`
 - `speed-test`
 - `info`
+- `firmware` — device identity (model/id/serial/fw)
+- `flash [firmware.bin]` — reboot to bootloader / flash firmware (requires `--yes`)
+- `discover` — find PSUs across serial ports/addresses
+- `register-scan` / `diff-scan` — read register space (read-only)
+
+## Bench tooling & generated docs
+
+Two consolidated entry points sit alongside the device CLI (`awto_riden.py`):
+
+- **`scripts/awto-riden-test.py`** — master **hardware** test + characterization runner.
+  Chains stages (`identify,status,write,measure,characterize`) with a guaranteed
+  safe-state teardown (0 V / 0 A / output OFF) between every stage and on any error.
+  ```bash
+  scripts/awto-riden-test.py --all --power-limit 60
+  scripts/awto-riden-test.py --chain measure,characterize --steps 12
+  ```
+- **`scripts/awto-riden-dev.py`** — **bench/analysis + docs** tool (no PSU output).
+  ```bash
+  scripts/awto-riden-dev.py gen-docs                 # regenerate generated docs (see below)
+  scripts/awto-riden-dev.py analyze-scan scan.json   # classify a register scan vs the map
+  ```
+
+**Generated docs.** The register map and the documentation figures are generated, not
+hand-edited. The single source of truth for the register map is **`register_map.py`**
+(built on the canonical `riden_register.py`). Regenerate everything with:
+
+```bash
+scripts/awto-riden-dev.py gen-docs            # docs/registers.md (+ waveform figures)
+```
+
+`docs/registers.md` carries a "GENERATED — do not edit by hand" header; edit
+`register_map.py` and re-run `gen-docs` instead.
 
 ## Architecture
 
