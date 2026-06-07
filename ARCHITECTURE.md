@@ -151,7 +151,7 @@ python3 test_harness.py -v
 
 ## Next Steps (v0.2+)
 
-- **BLE Support** — Add native Bluetooth/BLE transport (see BLE_ROADMAP.md)
+- **BLE Support** — Add native Bluetooth/BLE transport (see docs/BLE_ROADMAP.md)
 - **Framework Extraction** — Move RidenWorker → `awto-mcp-python-framework`
 - **Multi-PSU** — Run multiple CLI invocations in parallel (natural via Modbus)
 

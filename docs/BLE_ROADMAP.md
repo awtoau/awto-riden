@@ -24,7 +24,7 @@ These are paired but not yet integrated with the daemon.
 
 ## Discovery Attempt (v0.1.0-alpha)
 
-**File:** `ble_discover.py` (created but incomplete)
+**File:** `scripts/awto_riden_ble_discover.py` (created but incomplete)
 
 ```python
 # Attempted to connect and enumerate RK6006 BLE GATT profile
@@ -47,7 +47,7 @@ async with BleakClient("88:BB:52:09:E5:43") as client:
 **Goal:** Identify RK6006 BLE GATT services and characteristic UUIDs.
 
 **Steps:**
-1. Update `ble_discover.py` to add timeout **per service** (not per scan)
+1. Update `scripts/awto_riden_ble_discover.py` to add timeout **per service** (not per scan)
    - Try 5s timeout for discovery, 2s per service enumeration
    - Log which service/characteristic causes delays
 2. Cross-reference with RK6006 manufacturer docs or reverse-engineer from firmware
@@ -143,7 +143,7 @@ same Modbus RTU FC03/FC06/FC16 frames (the framing helpers can be shared with
 pip install bleak>=0.22
 
 # Run discovery
-python3 ble_discover.py
+python3 scripts/awto_riden_ble_discover.py
 
 # Update RK6006 GATT UUIDs in BleTransport (riden_transport.py)
 

@@ -48,6 +48,10 @@ import threading
 import time
 from typing import Any
 
+# Parked under ./parked/, but the core modules live in the repo root. Put the
+# repo root on sys.path so the sibling imports below resolve from anywhere.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import colorlog
 
 from protocol import (

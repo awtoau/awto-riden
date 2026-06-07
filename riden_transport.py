@@ -617,7 +617,7 @@ class BleTransport(RidenTransport):
     """Native BLE transport for RK6006-BT via bleak.
 
     Not yet implemented — raises NotImplementedError on open().
-    See BLE_ROADMAP.md for the planned implementation.
+    See docs/BLE_ROADMAP.md for the planned implementation.
     """
 
     def __init__(self, mac: str, address: int = 1) -> None:
