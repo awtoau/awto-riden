@@ -37,9 +37,9 @@ ls -la /dev/ttyUSB* /dev/ttyACM* 2>/dev/null
 ls -la /dev/rfcomm* 2>/dev/null
 
 # Then pass the chosen interface explicitly
-python3 ttu_cli.py --port /dev/ttyUSB1 status
+python3 awto_riden.py --port /dev/ttyUSB1 status
 # or
-python3 ttu_cli.py --port /dev/rfcomm0 status
+python3 awto_riden.py --port /dev/rfcomm0 status
 ```
 
 ## Run Daemon
@@ -62,11 +62,11 @@ python3 riden_daemon.py --port /dev/ttyUSB0 --baud 115200
 cd /home/dan/git/awto-mcp-riden
 
 # Ping daemon
-python3 ttu_cli.py ping
+python3 awto_riden.py ping
 # Output: {"ok": true}
 
 # Get PSU status
-python3 ttu_cli.py status
+python3 awto_riden.py status
 # Output:
 # {
 #   "voltage_set": 6.0,
@@ -77,27 +77,27 @@ python3 ttu_cli.py status
 # }
 
 # Set voltage
-python3 ttu_cli.py set-voltage 12.0
+python3 awto_riden.py set-voltage 12.0
 
 # Enable/disable output
-python3 ttu_cli.py output on
-python3 ttu_cli.py output off
+python3 awto_riden.py output on
+python3 awto_riden.py output off
 
 # Power cycle (5 second off, then on)
-python3 ttu_cli.py power-cycle 5
+python3 awto_riden.py power-cycle 5
 
 # Set protections
-python3 ttu_cli.py set-ovp 15.0
-python3 ttu_cli.py set-ocp 2.0
+python3 awto_riden.py set-ovp 15.0
+python3 awto_riden.py set-ocp 2.0
 
 # Start logging status every 100ms to file
-python3 ttu_cli.py log-start /tmp/psu-log.txt 100
+python3 awto_riden.py log-start /tmp/psu-log.txt 100
 
 # Stop logging
-python3 ttu_cli.py log-stop
+python3 awto_riden.py log-stop
 
 # View daemon health
-python3 ttu_cli.py info
+python3 awto_riden.py info
 # Output: {
 #   "pid": 12345,
 #   "rss_mb": 45.2,
@@ -114,7 +114,7 @@ python3 ttu_cli.py info
 
 ```bash
 # Enable debug logging
-python3 ttu_cli.py --verbose status
+python3 awto_riden.py --verbose status
 
 # Or daemon with debug level
 python3 riden_daemon.py --port /dev/ttyUSB0 --level DEBUG

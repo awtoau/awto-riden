@@ -1,7 +1,7 @@
 """
 awto-riden MCP server — direct serial, multi-PSU.
 
-PARKED (see issue #7): development is CLI-first for now (ttu_cli.py talks to
+PARKED (see issue #7): development is CLI-first for now (awto_riden.py talks to
 RidenWorker directly). The MCP server is not on the active path and was moved
 under ./mcp/. Kept for when AI-agent / Copilot access is wanted again.
 

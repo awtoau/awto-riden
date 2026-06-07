@@ -30,8 +30,8 @@ talks directly over serial (no daemon required) via our own `SerialTransport`
 + `RidenDevice` (`riden_transport.py` / `riden_daemon.py`):
 
 ```bash
-python3 ttu_cli.py --port /dev/ttyUSB0 ping
-python3 ttu_cli.py --port /dev/ttyUSB0 status
+python3 awto_riden.py --port /dev/ttyUSB0 ping
+python3 awto_riden.py --port /dev/ttyUSB0 status
 ```
 
 Measured round-trip latency is ~131 ms median — this is the RD6006 firmware
