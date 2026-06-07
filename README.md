@@ -292,6 +292,27 @@ rebuild offline from committed data — no load needed), and the fixture list. T
 figures *do* need an appropriate reactive load to **capture** (globe inrush, MR11,
 motor); once the `.jsonl` is committed, regeneration needs no hardware.
 
+## Repository structure
+
+```text
+awto_riden.py          device CLI (the primary entry point)
+register_map.py        single source of truth for the Modbus register map
+protocol.py            shared constants / JSON-lines helpers
+riden_daemon.py        RidenWorker + RidenDevice + discover_devices
+riden_transport.py     SerialTransport (Modbus RTU) + vendored discover() loader
+riden_register.py      canonical register constants (verbatim upstream)
+riden_flash.py         bootloader firmware loader (MIT reimplementation)
+test_harness.py        unittest suite (no hardware required)
+mcp/                   MCP stdio server (mcp_server.py) + .vscode wiring
+scripts/               bench tooling:
+                         awto-riden-test.py   hardware test/characterization runner
+                         awto-riden-dev.py    analysis + docs (gen-docs, analyze-scan)
+                         awto_riden_*.py      capture/plot/report/ble libraries
+docs/                  generated + hand-written docs (see docs/REGENERATING.md)
+parked/                not-on-active-path code kept for the future (see parked/README.md)
+vendor/                git submodule: awto-serial (shared discover() primitive)
+```
+
 ## Architecture
 
 ```text

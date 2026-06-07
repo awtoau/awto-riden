@@ -28,9 +28,13 @@ The raw response dict is available as exc.response.
 from __future__ import annotations
 
 import json
+import os
 import socket
 import sys
 from typing import Any
+
+# Parked under ./parked/, but protocol.py lives in the repo root.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from protocol import (
     DEFAULT_SOCKET_PATH,
