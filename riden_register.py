@@ -10,6 +10,10 @@
 #   docs/data/register_scan_20260503-011913Z.json
 
 
+# NOTE: this map is for the RD/RK60xx family ONLY. The older DPS series
+# (DPS3005/5005/5015/5020/8005, DPH5005) uses a DIFFERENT Modbus register
+# layout — output-enable, keypad-lock and backlight sit at other addresses —
+# so these constants must not be applied to DPS devices.
 class Register:
     # Init
     ID = 0

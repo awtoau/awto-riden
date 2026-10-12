@@ -106,7 +106,14 @@
       "Bash(dart *)",
       "Bash(adb *)",
       "Bash(code *)",
-      "Bash(code-insiders *)"
+      "Bash(code-insiders *)",
+      "Bash(st-info *)",
+      "Bash(avahi-browse *)",
+      "Bash(curl *)",
+      "Bash(sqlite3 *)",
+      "mcp__io_github_github_github-mcp-server__search_repositories",
+      "mcp__io_github_github_github-mcp-server__search_code",
+      "mcp__io_github_github_github-mcp-server__get_file_contents"
     ]
   },
   "additionalDirectories": [
