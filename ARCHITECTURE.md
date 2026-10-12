@@ -20,7 +20,7 @@ The original daemon added unnecessary complexity:
 └────────┬────────┘
          │
     ┌────▼────┐
-    │MCP Tool │ (mcp_server.py)
+    │MCP Tool │ (mcp/mcp_server.py, parked — see issue #7)
     └────┬────┘
          │
     ┌────▼──────────────┐
@@ -88,25 +88,26 @@ python3 awto_riden.py --port /dev/ttyUSB0 output on
 python3 awto_riden.py --port /dev/ttyUSB0 power-cycle --seconds 3
 ```
 
-### MCP Server (for Copilot)
+### MCP Server (for Copilot) — PARKED, see issue #7
 
 ```bash
-# Terminal 1: Start MCP server
-python3 mcp_server.py --port /dev/ttyUSB0
+# Terminal 1: Start MCP server (auto-detects the serial port)
+python3 mcp/mcp_server.py
 
-# Terminal 2 (or VS Code with .vscode/mcp.json): Copilot asks
+# Terminal 2 (or VS Code with mcp/mcp.json copied into .vscode/): Copilot asks
 # "Set the PSU to 12V 2A and turn it on"
 # → Copilot calls rd_set_voltage(12), rd_set_current(2), rd_output(True)
 ```
 
-### Register in VS Code (.vscode/mcp.json)
+### Register in VS Code (copy mcp/mcp.json to .vscode/mcp.json to enable)
 
 ```json
 {
-  "mcpServers": {
+  "servers": {
     "awto-riden": {
-      "command": "python3",
-      "args": ["/home/dan/git/awto-mcp-riden/mcp_server.py", "--port", "/dev/ttyUSB0"]
+      "type": "stdio",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["${workspaceFolder}/mcp/mcp_server.py"]
     }
   }
 }
@@ -117,7 +118,9 @@ python3 mcp_server.py --port /dev/ttyUSB0
 ```toml
 [project.scripts]
 awto-riden = "awto_riden:main"
-awto-riden-mcp = "mcp_server:main"
+# awto-riden-mcp: parked (see issue #7). mcp/mcp_server.py is run directly
+# (python3 mcp/mcp_server.py), not as a console script — a "mcp.mcp_server"
+# entry point would collide with the PyPI `mcp` package it imports.
 ```
 
 ## Advantages Over Daemon

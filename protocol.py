@@ -1,7 +1,23 @@
 """
 Shared protocol helpers for awto-mcp-riden.
 
-Transport
+STATUS: LEGACY / NOT THE ACTIVE WIRE PROTOCOL
+----------------------------------------------------------------------------
+This module documents the JSON-Lines socket protocol for the OLD daemon
+architecture, which has been replaced (see ARCHITECTURE.md: "Direct Serial,
+No Daemon"). The current CLI (`awto_riden.py`) and MCP server
+(`mcp/mcp_server.py`, parked) talk to the PSU directly via `RidenWorker`
+(`riden_daemon.py`) over serial Modbus RTU — there is no socket daemon and
+none of the request/response shapes documented below are sent or received
+on the wire today. `make_ok`/`make_err` and the error-code constants are
+still used by the active code for in-process result dicts; everything else
+in this docstring is kept only for historical reference in case the daemon
+is rebuilt (see "Next Steps" in ARCHITECTURE.md). Do not use this as a
+reference for the current API — see README.md's "CLI interface summary" /
+"MCP interface summary" and `awto_riden.py --help` instead.
+----------------------------------------------------------------------------
+
+Transport (legacy daemon, inactive)
 ---------
 All communication is newline-delimited JSON (JSON-Lines) over a Unix domain
 socket at DEFAULT_SOCKET_PATH.  Each exchange is one request line followed by
